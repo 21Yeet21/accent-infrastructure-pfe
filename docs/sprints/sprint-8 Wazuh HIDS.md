@@ -1,6 +1,4 @@
-Voici le Sprint 8 nettoyé, avec les références aux fichiers du dépôt et les diagrammes (activity + deployment) intégrés :
 
-```markdown
 # Sprint 8 — Wazuh HIDS : Détection d'Intrusion et Sécurité des Endpoints
 
 ## Objectif
