@@ -1,17 +1,10 @@
 
----
-
-## Fichier 1 : `docs/operations/startup-shutdown-eve-ng.md`
-
-Voici la version **nettoyée, sanitizée et corrigée** de ton fichier (j'ai corrigé la numérotation des étapes, supprimé les doublons, et remplacé les mots de passe par des placeholders) :
-
-```markdown
 # Procédures de Démarrage et Arrêt — Environnement EVE-NG
 
-> **Version** : 5.0  
-> **Dernière mise à jour** : 2026-05-21  
-> **Configuration** : 1 nœud Proxmox (pve1) + pfSense VM + MonSrv VM + Wazuh VM + S1/S2 nodes EVE-NG  
-> **Accès EVE-NG** : 192.168.140.160  
+> **Version** : 5.0
+> **Dernière mise à jour** : 2026-05-21
+> **Configuration** : 1 nœud Proxmox (pve1) + pfSense VM + MonSrv VM + Wazuh VM + S1/S2 nodes EVE-NG
+> **Accès EVE-NG** : 192.168.140.160
 > **Lab UID** : `2e718c0b-41bf-48c0-a67a-8fac5dbb9e97`
 
 ---
@@ -66,12 +59,12 @@ end
 ssh root@192.168.50.10 "cd ~/monitoring-stack && docker compose up -d && docker compose ps"
 ```
 
-| Conteneur   | Port              | Rôle                  |
-|-------------|-------------------|-----------------------|
-| prometheus  | 9090              | Collecte métriques    |
-| grafana     | 3000              | Visualisation         |
-| loki        | 3100              | Agrégation logs       |
-| tempo       | 3200, 4317, 4318  | Traces distribuées    |
+| Conteneur | Port | Rôle |
+|-----------|------|------|
+| prometheus | 9090 | Collecte métriques |
+| grafana | 3000 | Visualisation |
+| loki | 3100 | Agrégation logs |
+| tempo | 3200, 4317, 4318 | Traces distribuées |
 
 ---
 
@@ -107,14 +100,14 @@ ssh -L 9444:192.168.20.24:443 root@192.168.140.141    # Wazuh
 ssh -L 9090:192.168.50.10:9090 root@192.168.140.141   # Prometheus
 ```
 
-| Service          | URL                            | Identifiants                    |
-|------------------|--------------------------------|---------------------------------|
-| Grafana (dev)    | http://localhost:3000/grafana/ | admin / `<GRAFANA_PASSWORD>`    |
-| Grafana (VLAN20) | http://192.168.50.12/grafana/  | admin / `<GRAFANA_PASSWORD>`    |
-| pfSense          | https://localhost:9443         | admin / `<PFSENSE_PASSWORD>`    |
-| Proxmox          | https://localhost:9006         | root / `<PROXMOX_PASSWORD>`     |
-| Wazuh            | https://localhost:9444         | admin / `<WAZUH_PASSWORD>`      |
-| Prometheus       | http://192.168.50.10:9090      | —                               |
+| Service | URL | Identifiants |
+|---------|-----|-------------|
+| Grafana (dev) | http://localhost:3000/grafana/ | admin / `<REDACTED>` |
+| Grafana (VLAN20) | http://192.168.50.12/grafana/ | admin / `<REDACTED>` |
+| pfSense | https://localhost:9443 | admin / `<REDACTED>` |
+| Proxmox | https://localhost:9006 | root / `<REDACTED>` |
+| Wazuh | https://localhost:9444 | admin / `<REDACTED>` |
+| Prometheus | http://192.168.50.10:9090 | — |
 
 > **Note** : Les mots de passe doivent être fournis séparément (ne jamais les commiter dans le dépôt).
 
@@ -182,7 +175,7 @@ curl -s http://192.168.50.10:9090/api/v1/targets | python3 -m json.tool | grep -
 curl -s http://192.168.50.10:3100/ready
 
 # Grafana
-curl -s http://admin:<GRAFANA_PASSWORD>@192.168.50.10:3000/api/health
+curl -s http://admin:<REDACTED>@192.168.50.10:3000/api/health
 
 # Logs dans Loki
 curl -s "http://192.168.50.10:3100/loki/api/v1/label/job/values" | python3 -m json.tool
@@ -251,7 +244,7 @@ curl -s "http://192.168.50.10:3200/api/search?limit=3" | python3 -m json.tool | 
 
 ```bash
 ssh ayoub@192.168.50.11 "for i in {1..50}; do curl -s http://localhost:8080/ > /dev/null; done"
-ssh ayoub@192.168.50.11 "docker exec mysql mysql -uroot -p<MYSQL_PASSWORD> -e 'SHOW DATABASES;' 2>/dev/null"
+ssh ayoub@192.168.50.11 "docker exec mysql mysql -uroot -p<REDACTED> -e 'SHOW DATABASES;' 2>/dev/null"
 ssh ayoub@192.168.50.12 "for i in {1..20}; do curl -s http://localhost/ > /dev/null; done"
 ```
 
@@ -279,14 +272,24 @@ wr
 
 ## Historique
 
-| Version | Date       | Changements                                                                                             |
-|---------|------------|---------------------------------------------------------------------------------------------------------|
-| v1.0    | 2026-05-08 | Procédure initiale 3-nœuds Proxmox                                                                    |
-| v2.0    | 2026-05-10 | Migration VLAN20, SW1, pve nodes                                                                      |
-| v2.1    | 2026-05-13 | Single-node EVE-NG, thin pool, commit hda                                                             |
-| v3.0    | 2026-05-14 | Nouveau EVE-NG 6.x (.140.160), cp au lieu de commit                                                   |
-| v4.0    | 2026-05-20 | Ajout pve1 Node Exporter, Wazuh VM 108, dépannage Alloy/Loki/Grafana                                  |
-| v5.0    | 2026-05-21 | ISP-R1 config persistante (suppression reconfiguration obligatoire), fix duplex, ntopng troubleshooting |
-```
+| Version | Date | Changements |
+|---------|------|-------------|
+| v1.0 | 2026-05-08 | Procédure initiale 3-nœuds Proxmox |
+| v2.0 | 2026-05-10 | Migration VLAN20, SW1, pve nodes |
+| v2.1 | 2026-05-13 | Single-node EVE-NG, thin pool, commit hda |
+| v3.0 | 2026-05-14 | Nouveau EVE-NG 6.x (.140.160), cp au lieu de commit |
+| v4.0 | 2026-05-20 | Ajout pve1 Node Exporter, Wazuh VM 108, dépannage Alloy/Loki/Grafana |
+| v5.0 | 2026-05-21 | ISP-R1 config persistante, fix duplex |
 
 ---
+
+## What I Changed
+
+| Before | After |
+|--------|-------|
+| `<GRAFANA_PASSWORD>` | `<REDACTED>` (consistent) |
+| `<PFSENSE_PASSWORD>` | `<REDACTED>` |
+| `<PROXMOX_PASSWORD>` | `<REDACTED>` |
+| `<WAZUH_PASSWORD>` | `<REDACTED>` |
+| `<MYSQL_PASSWORD>` in dépannage | `<REDACTED>` |
+| ntopng in v5.0 changelog | Removed |
