@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>PFE — Topologie Réseau et Système</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2335;
+    --border: #2a3045;
+    --border2: #3a4560;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --internet: #38bdf8;
+    --wan: #f87171;
+    --vlan20: #4ade80;
+    --vlan30: #a78bfa;
+    --vlan40: #f472b6;
+    --vlan50: #fb923c;
+    --vlan10: #facc15;
+    --mgmt: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 32px;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .layer {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 6px;
+    background: var(--surface);
+    position: relative;
+  }
+
+  .layer-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .nodes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    flex: 1;
+    min-width: 110px;
+  }
+
+  .node-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .node-detail {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+
+  .t-internet { color: var(--internet); border-color: var(--internet); background: rgba(56,189,248,.08); }
+  .t-wan      { color: var(--wan);      border-color: var(--wan);      background: rgba(248,113,113,.08); }
+  .t-v20      { color: var(--vlan20);   border-color: var(--vlan20);   background: rgba(74,222,128,.08); }
+  .t-v30      { color: var(--vlan30);   border-color: var(--vlan30);   background: rgba(167,139,250,.08); }
+  .t-v40      { color: var(--vlan40);   border-color: var(--vlan40);   background: rgba(244,114,182,.08); }
+  .t-v50      { color: var(--vlan50);   border-color: var(--vlan50);   background: rgba(251,146,60,.08); }
+  .t-v10      { color: var(--vlan10);   border-color: var(--vlan10);   background: rgba(250,204,21,.08); }
+  .t-mgmt     { color: var(--mgmt);     border-color: var(--mgmt);     background: rgba(148,163,184,.08); }
+
+  .arrow {
+    text-align: center;
+    color: var(--border2);
+    font-size: 18px;
+    line-height: 1;
+    margin: 2px 0;
+  }
+
+  .arrow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  /* Right panel */
+  .panel {
+    position: sticky;
+    top: 32px;
+  }
+
+  .panel-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  table.info {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  table.info tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  table.info tr:last-child {
+    border-bottom: none;
+  }
+
+  table.info td {
+    padding: 5px 0;
+    vertical-align: top;
+  }
+
+  table.info td:first-child {
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    width: 80px;
+    padding-right: 8px;
+  }
+
+  .port-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+  }
+  .port-row:last-child { border-bottom: none; }
+
+  .port-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    min-width: 52px;
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  .port-desc {
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .bridge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
+  }
+  .bridge-row:last-child { border-bottom: none; }
+
+  .bridge-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    min-width: 52px;
+    color: var(--text);
+  }
+
+  .note {
+    background: rgba(251,146,60,.06);
+    border: 1px solid rgba(251,146,60,.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+  }
+
+  .l-internet { color: var(--internet); }
+  .l-wan { color: var(--wan); }
+  .l-v10 { color: var(--vlan10); }
+  .l-v20 { color: var(--vlan20); }
+  .l-v30 { color: var(--vlan30); }
+  .l-v40 { color: var(--vlan40); }
+  .l-v50 { color: var(--vlan50); }
+
+  .wide-node { flex: 2; }
+
+  @media print {
+    body { background: white; color: black; padding: 16px; }
+    .grid { grid-template-columns: 1fr; }
+    .panel { position: static; }
+    :root {
+      --bg: white; --surface: #f8f9fa; --surface2: #f1f3f5;
+      --border: #dee2e6; --border2: #adb5bd;
+      --text: #212529; --muted: #6c757d;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PFE — Topologie Réseau et Système</h1>
+  <p>ACCENT · EVE-NG Lab · Phase 2 · vIOS L2 + pfSense + Proxmox HA cluster</p>
+</header>
+
+<div class="grid">
+
+  <!-- LEFT: topology layers -->
+  <div>
+
+    <!-- INTERNET -->
+    <div class="layer" style="border-color:#1e3a4a">
+      <div class="layer-title">
+        <div class="dot" style="background:var(--internet)"></div>
+        <span class="l-internet">Zone Internet / ISP simulation</span>
+      </div>
+      <div class="nodes">
+        <div class="node">
+          <div class="node-name">Cloud0</div>
+          <div class="node-detail">NAT cloud — EVE-NG host uplink</div>
+          <div class="tags"><span class="tag t-internet">Internet</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">ISP-R1 · Cisco 3725</div>
+          <div class="node-detail">
+            fa0/0 → Cloud0<br>
+            fa0/1 → pve1 ens4<br>
+            fa1/0 → pve2 ens4<br>
+            fa2/0 → pve3 ens4
+          </div>
+          <div class="tags">
+            <span class="tag t-internet">ISP router</span>
+            <span class="tag t-wan">WAN uplink</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+    <div class="arrow-label">WAN — fa0/1-fa2/0 → pve1/2/3 ens4 → vmbr1 → pfSense vtnet1</div>
+
+    <!-- FIREWALL -->
+    <div class="layer" style="border-color:#4a1e1e">
+      <div class="layer-title">
+        <div class="dot" style="background:var(--wan)"></div>
+        <span class="l-wan">Firewall / inter-VLAN routing — pfSense vm:101</span>
+        <span class="tag t-mgmt" style="margin-left:auto">HA · Ceph · migrates pve1↔2↔3</span>
+      </div>
+      <div class="nodes">
+        <div class="node">
+          <div class="node-name">vtnet1 — WAN</div>
+          <div class="node-detail">vmbr1 → ens4 → ISP-R1<br>présent sur les 3 nœuds pve</div>
+          <div class="tags"><span class="tag t-wan">WAN</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">vtnet0 — LAN</div>
+          <div class="node-detail">vmbr0 → VLAN20<br>192.168.20.23/27</div>
+          <div class="tags"><span class="tag t-v20">VLAN20 mgmt</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">vtnet2 — OPT1</div>
+          <div class="node-detail">vmbr2 → VLAN50<br>192.168.50.1/26</div>
+          <div class="tags"><span class="tag t-v50">VLAN50 DMZ</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+    <div class="arrow-label">vtnet2 → vmbr2 → ens3 trunk → SW1 Gi0/0-2 (VLAN50 into DMZ)</div>
+
+    <!-- PROXMOX CLUSTER -->
+    <div class="layer" style="border-color:#2a1e4a">
+      <div class="layer-title">
+        <div class="dot" style="background:var(--vlan30)"></div>
+        <span class="l-v30">Proxmox cluster — pfe-cluster · 3 nœuds</span>
+      </div>
+      <div class="nodes">
+        <div class="node">
+          <div class="node-name">pve1 · 192.168.140.139</div>
+          <div class="node-detail">
+            ens3 → SW1 Gi0/0 (trunk)<br>
+            ens4 → ISP-R1 fa0/1 (WAN)<br>
+            ens5 → Cloud0 (mgmt temp)
+          </div>
+          <div class="tags">
+            <span class="tag t-v20">VLAN20</span>
+            <span class="tag t-v50">VLAN50</span>
+            <span class="tag t-v30">VLAN30</span>
+            <span class="tag t-v40">VLAN40</span>
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-name">pve2 · 192.168.140.138</div>
+          <div class="node-detail">
+            ens3 → SW1 Gi0/1 (trunk)<br>
+            ens4 → ISP-R1 fa1/0 (WAN)<br>
+            ens5 → Cloud0 (mgmt temp)
+          </div>
+          <div class="tags">
+            <span class="tag t-v20">VLAN20</span>
+            <span class="tag t-v50">VLAN50</span>
+            <span class="tag t-v30">VLAN30</span>
+            <span class="tag t-v40">VLAN40</span>
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-name">pve3 · 192.168.140.140</div>
+          <div class="node-detail">
+            ens3 → SW1 Gi0/2 (trunk)<br>
+            ens4 → ISP-R1 fa2/0 (WAN)<br>
+            ens5 → Cloud0 (mgmt temp)
+          </div>
+          <div class="tags">
+            <span class="tag t-v20">VLAN20</span>
+            <span class="tag t-v50">VLAN50</span>
+            <span class="tag t-v30">VLAN30</span>
+            <span class="tag t-v40">VLAN40</span>
+          </div>
+        </div>
+      </div>
+      <!-- VMs on Ceph -->
+      <div class="nodes" style="margin-top:8px">
+        <div class="node" style="flex:1">
+          <div class="node-name">pfSense vm:101</div>
+          <div class="node-detail">HA · actuellement pve3<br>Disk: Ceph vm-pool</div>
+          <div class="tags"><span class="tag t-wan">WAN</span><span class="tag t-v20">VLAN20</span><span class="tag t-v50">VLAN50</span></div>
+        </div>
+        <div class="node" style="flex:1">
+          <div class="node-name">Wazuh vm:102</div>
+          <div class="node-detail">Ubuntu 22.04 · pve2<br>192.168.20.24/27</div>
+          <div class="tags"><span class="tag t-v20">VLAN20</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+    <div class="arrow-label">ens3 trunk → SW1 — vIOS L2 core switch distributes VLANs</div>
+
+    <!-- SW1 -->
+    <div class="layer" style="border-color:#3a2e1a">
+      <div class="layer-title">
+        <div class="dot" style="background:var(--vlan10)"></div>
+        <span class="l-v10">SW1 — vIOS L2 Core switch · 8 ports</span>
+      </div>
+      <div class="nodes">
+        <div class="node">
+          <div class="node-name">Gi0/0-2 — Trunk</div>
+          <div class="node-detail">→ pve1 / pve2 / pve3 ens3<br>Tagged: VLAN 20/30/40/50</div>
+          <div class="tags"><span class="tag t-mgmt">Trunk all VLANs</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">Gi0/3-5 — Access</div>
+          <div class="node-detail">→ MonSrv / S1 / S2 ens4<br>Untagged: VLAN50 only</div>
+          <div class="tags"><span class="tag t-v50">Access VLAN50</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">Gi0/6 — Access</div>
+          <div class="node-detail">→ Clients VLAN10<br>Untagged: VLAN10</div>
+          <div class="tags"><span class="tag t-v10">Access VLAN10</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">Gi0/7 — Spare</div>
+          <div class="node-detail">Available</div>
+          <div class="tags"><span class="tag t-mgmt">Libre</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+    <div class="arrow-label">Gi0/3-5 access VLAN50 → DMZ servers ens4 &nbsp;|&nbsp; Gi0/6 access VLAN10 → Clients</div>
+
+    <!-- DMZ VLAN50 -->
+    <div class="layer" style="border-color:#3a2010">
+      <div class="layer-title">
+        <div class="dot" style="background:var(--vlan50)"></div>
+        <span class="l-v50">DMZ — VLAN50 · 192.168.50.0/26</span>
+      </div>
+      <div class="nodes">
+        <div class="node">
+          <div class="node-name">MonSrv</div>
+          <div class="node-detail">Prometheus · Loki<br>Tempo · Grafana<br>ens4 · 192.168.50.10</div>
+          <div class="tags"><span class="tag t-v50">VLAN50</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">S1</div>
+          <div class="node-detail">Apache · MySQL<br>OTEL · Alloy<br>ens4 · 192.168.50.11</div>
+          <div class="tags"><span class="tag t-v50">VLAN50</span></div>
+        </div>
+        <div class="node">
+          <div class="node-name">S2</div>
+          <div class="node-detail">Nginx · Redis<br>Alloy · Node Exporter<br>ens4 · 192.168.50.12</div>
+          <div class="tags"><span class="tag t-v50">VLAN50</span></div>
+        </div>
+      </div>
+      <div class="note">Pas d'accès internet direct — tout le trafic passe par pfSense OPT1 → WAN</div>
+    </div>
+
+    <!-- CLIENTS VLAN10 -->
+    <div class="layer" style="border-color:#3a320a; margin-top:6px">
+      <div class="layer-title">
+        <div class="dot" style="background:var(--vlan10)"></div>
+        <span class="l-v10">Clients — VLAN10 · 192.168.10.0/24</span>
+      </div>
+      <div class="nodes">
+        <div class="node wide-node">
+          <div class="node-name">Postes clients / WiFi</div>
+          <div class="node-detail">SW1 Gi0/6 access VLAN10 · DHCP via pfSense<br>Accès DMZ contrôlé par règles pfSense · jamais direct vers VLAN50</div>
+          <div class="tags">
+            <span class="tag t-v10">VLAN10</span>
+            <span class="tag t-mgmt">DHCP 192.168.10.0/24</span>
+          </div>
+        </div>
+      </div>
+      <div class="note">Client → VLAN10 → pfSense → règles firewall → VLAN50 DMZ (si autorisé)</div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel">
+
+    <!-- VLAN plan -->
+    <div class="panel-section">
+      <div class="panel-title">Plan VLAN (VLSM)</div>
+      <table class="info">
+        <tr><td class="l-v10">VLAN10</td><td>192.168.10.0/24<br><span style="color:var(--muted)">Clients / WiFi · DHCP</span></td></tr>
+        <tr><td class="l-v20">VLAN20</td><td>192.168.20.0/27<br><span style="color:var(--muted)">Management · pfSense .23 · Wazuh .24</span></td></tr>
+        <tr><td class="l-v30">VLAN30</td><td>192.168.30.0/29<br><span style="color:var(--muted)">Corosync heartbeat</span></td></tr>
+        <tr><td class="l-v40">VLAN40</td><td>192.168.40.0/29<br><span style="color:var(--muted)">Ceph replication</span></td></tr>
+        <tr><td class="l-v50">VLAN50</td><td>192.168.50.0/26<br><span style="color:var(--muted)">DMZ — MonSrv .10 · S1 .11 · S2 .12</span></td></tr>
+        <tr><td style="color:var(--muted)">VLAN70</td><td>192.168.70.0/28<br><span style="color:var(--muted)">VPN clients (futur)</span></td></tr>
+      </table>
+    </div>
+
+    <!-- SW1 port plan -->
+    <div class="panel-section">
+      <div class="panel-title">SW1 — Port plan</div>
+      <div class="port-row"><span class="port-id l-v30">Gi0/0</span><span class="port-desc">Trunk → pve1 ens3</span></div>
+      <div class="port-row"><span class="port-id l-v30">Gi0/1</span><span class="port-desc">Trunk → pve2 ens3</span></div>
+      <div class="port-row"><span class="port-id l-v30">Gi0/2</span><span class="port-desc">Trunk → pve3 ens3</span></div>
+      <div class="port-row"><span class="port-id l-v50">Gi0/3</span><span class="port-desc">Access VLAN50 → MonSrv ens4</span></div>
+      <div class="port-row"><span class="port-id l-v50">Gi0/4</span><span class="port-desc">Access VLAN50 → S1 ens4</span></div>
+      <div class="port-row"><span class="port-id l-v50">Gi0/5</span><span class="port-desc">Access VLAN50 → S2 ens4</span></div>
+      <div class="port-row"><span class="port-id l-v10">Gi0/6</span><span class="port-desc">Access VLAN10 → Clients</span></div>
+      <div class="port-row"><span class="port-id" style="color:var(--muted)">Gi0/7</span><span class="port-desc" style="color:var(--muted)">Spare</span></div>
+    </div>
+
+    <!-- Bridge layout per pve -->
+    <div class="panel-section">
+      <div class="panel-title">Bridges — chaque nœud pve</div>
+      <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px">ens3 → trunk SW1</div>
+      <div class="bridge-row"><span class="bridge-name l-v20">vmbr0</span><span style="color:var(--muted);font-size:11px">VLAN20 — mgmt + pfSense LAN</span></div>
+      <div class="bridge-row"><span class="bridge-name l-v50">vmbr2</span><span style="color:var(--muted);font-size:11px">VLAN50 — pfSense OPT1 / DMZ</span></div>
+      <div class="bridge-row"><span class="bridge-name l-v30">vmbr3</span><span style="color:var(--muted);font-size:11px">VLAN30 — Corosync heartbeat</span></div>
+      <div class="bridge-row"><span class="bridge-name l-v40">vmbr4</span><span style="color:var(--muted);font-size:11px">VLAN40 — Ceph replication</span></div>
+      <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin:8px 0 6px">ens4 → ISP-R1 (WAN)</div>
+      <div class="bridge-row"><span class="bridge-name l-wan">vmbr1</span><span style="color:var(--muted);font-size:11px">WAN — pfSense vtnet1 (HA)</span></div>
+      <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin:8px 0 6px">ens5 → Cloud0 (mgmt temp)</div>
+      <div class="bridge-row"><span class="bridge-name" style="color:var(--muted)">vmbr5</span><span style="color:var(--muted);font-size:11px">SSH mgmt temporaire</span></div>
+    </div>
+
+    <!-- pfSense interfaces -->
+    <div class="panel-section">
+      <div class="panel-title">pfSense vm:101 interfaces</div>
+      <div class="bridge-row"><span class="bridge-name l-wan">vtnet1</span><span style="color:var(--muted);font-size:11px">WAN → vmbr1 → ens4 → ISP-R1</span></div>
+      <div class="bridge-row"><span class="bridge-name l-v20">vtnet0</span><span style="color:var(--muted);font-size:11px">LAN → vmbr0 → 192.168.20.23</span></div>
+      <div class="bridge-row"><span class="bridge-name l-v50">vtnet2</span><span style="color:var(--muted);font-size:11px">OPT1 → vmbr2 → 192.168.50.1</span></div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

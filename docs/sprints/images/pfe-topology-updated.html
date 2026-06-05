@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFE — Architecture Réseau et Système</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c10;--surface:#10141c;--card:#141820;--border:#1e2535;--border2:#2a3550;
+  --text:#dde3f0;--muted:#5a6680;--dim:#2a3450;
+  --internet:#38bdf8;--wan:#f87171;--v10:#facc15;--v20:#4ade80;
+  --v30:#a78bfa;--v40:#f472b6;--v50:#fb923c;--v70:#818cf8;--mgmt:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;line-height:1.6;padding:40px}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(30,37,53,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(30,37,53,.3) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;max-width:1200px;margin:0 auto}
+header{margin-bottom:48px;border-bottom:1px solid var(--border);padding-bottom:24px}
+header h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-.02em;color:var(--text)}
+header h1 span{-webkit-text-stroke:1px var(--dim);color:transparent}
+.meta{display:flex;gap:32px;margin-top:16px;flex-wrap:wrap}
+.mi{display:flex;flex-direction:column;gap:2px}
+.ml{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.mv{font-size:13px;font-weight:500;color:var(--text)}
+
+.grid{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
+
+/* TOPOLOGY COLUMN */
+.layer{border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:4px;background:var(--card)}
+.ltitle{font-size:10px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.nodes{display:flex;gap:8px;flex-wrap:wrap}
+.node{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;flex:1;min-width:120px}
+.nname{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px}
+.ndetail{font-size:11px;color:var(--muted);line-height:1.7}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;border:1px solid}
+.arrow{text-align:center;color:var(--border2);font-size:16px;padding:2px 0;display:flex;align-items:center;justify-content:center;gap:8px}
+.alabel{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+
+/* tag colors */
+.ti{color:var(--internet);border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.07)}
+.tw{color:var(--wan);border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.07)}
+.t10{color:var(--v10);border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.07)}
+.t20{color:var(--v20);border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.07)}
+.t30{color:var(--v30);border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.07)}
+.t40{color:var(--v40);border-color:rgba(244,114,182,.4);background:rgba(244,114,182,.07)}
+.t50{color:var(--v50);border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.07)}
+.t70{color:var(--v70);border-color:rgba(129,140,248,.4);background:rgba(129,140,248,.07)}
+.tm{color:var(--mgmt);border-color:rgba(100,116,139,.4);background:rgba(100,116,139,.07)}
+.tids{color:#f59e0b;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.07)}
+
+/* layer borders */
+.l-internet{border-color:#1e3a4a}
+.l-fw{border-color:#4a1e1e}
+.l-pve{border-color:#2a1e4a}
+.l-sw{border-color:#3a2e10}
+.l-dmz{border-color:#3a2010}
+.l-clients{border-color:#3a320a}
+.l-mgmt{border-color:#1a3a2a}
+
+/* RIGHT PANEL */
+.panel{position:sticky;top:40px;display:flex;flex-direction:column;gap:12px}
+.psection{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.ptitle{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-weight:500}
+.prow{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.prow:last-child{border-bottom:none}
+.pid{font-family:'DM Mono',monospace;font-weight:500;min-width:64px;flex-shrink:0}
+.pdesc{color:var(--muted);flex:1}
+.kv{display:flex;flex-direction:column;gap:0}
+.kvrow{display:grid;grid-template-columns:90px 1fr;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px}
+.kvrow:last-child{border-bottom:none}
+.kk{color:var(--muted)}
+.vv{color:var(--text);font-family:'DM Mono',monospace}
+.note{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6}
+.vlan-row{display:grid;grid-template-columns:60px 140px 36px 1fr;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.vlan-row:last-child{border-bottom:none}
+.vdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+code{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface);padding:1px 5px;border-radius:3px;border:1px solid var(--border)}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.panel{position:static}}
+@media print{body{background:#fff;color:#111;padding:20px}body::before{display:none}.layer{border:1px solid #ddd;background:#fff}.node{background:#f8f9fa;border:1px solid #ddd}.panel{position:static}.psection{border:1px solid #ddd;background:#fff}:root{--text:#111;--muted:#555;--surface:#f8f9fa;--card:#fff;--border:#ddd}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Architecture <span>Réseau et Système</span></h1>
+  <div class="meta">
+    <div class="mi"><span class="ml">Projet</span><span class="mv">Monitoring Réseau et Système</span></div>
+    <div class="mi"><span class="ml">Entreprise</span><span class="mv">ACCENT</span></div>
+    <div class="mi"><span class="ml">Environnement</span><span class="mv">EVE-NG Simulation</span></div>
+    <div class="mi"><span class="ml">Virtualisation</span><span class="mv">Proxmox VE — Single-Node (px01)</span></div>
+    <div class="mi"><span class="ml">Méthode VLAN</span><span class="mv">802.1Q trunk — 2 interfaces pfSense</span></div>
+  </div>
+</header>
+
+<div class="grid">
+<div>
+
+<!-- INTERNET -->
+<div class="layer l-internet">
+  <div class="ltitle"><div class="dot" style="background:var(--internet)"></div><span style="color:var(--internet)">Zone Internet / Simulation ISP</span></div>
+  <div class="nodes">
+    <div class="node">
+      <div class="nname">Cloud0</div>
+      <div class="ndetail">NAT cloud EVE-NG<br>Accès Internet via hôte</div>
+      <div class="tags"><span class="tag ti">NAT</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">ISP-R1 — Cisco 3725</div>
+      <div class="ndetail">
+        fa0/0 → Cloud0<br>
+        fa0/1 → px01 ens4
+      </div>
+      <div class="tags"><span class="tag ti">ISP simulé</span><span class="tag tw">WAN uplink</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span class="alabel">fa0/1 → px01 ens4 → vmbr1 → pfSense vtnet0 (WAN)</span></div>
+
+<!-- FIREWALL -->
+<div class="layer l-fw">
+  <div class="ltitle"><div class="dot" style="background:var(--wan)"></div><span style="color:var(--wan)">Pare-feu / Routeur inter-VLAN — pfSense VM</span><span class="tag tids" style="margin-left:auto">Suricata IPS/IDS · 2 interfaces</span></div>
+  <div class="nodes">
+    <div class="node">
+      <div class="nname">vtnet0 — WAN</div>
+      <div class="ndetail">vmbr1 → ens4 → ISP-R1<br>NAT outbound vers Internet</div>
+      <div class="tags"><span class="tag tw">WAN</span></div>
+    </div>
+    <div class="node" style="flex:2">
+      <div class="nname">vtnet1 — Trunk 802.1Q</div>
+      <div class="ndetail">vmbr0 → ens3 → SW1 (un seul câble physique, tous les VLANs tagués)</div>
+      <div class="tags">
+        <span class="tag t10">vtnet1.10 → 192.168.10.1/24</span>
+        <span class="tag t20">vtnet1.20 → 192.168.20.23/27</span>
+        <span class="tag t50">vtnet1.50 → 192.168.50.1/26</span>
+        <span class="tag t70">vtnet1.70 → 192.168.70.1/28</span>
+      </div>
+    </div>
+  </div>
+  <div class="nodes" style="margin-top:8px">
+    <div class="node">
+      <div class="nname">Suricata IPS/IDS</div>
+      <div class="ndetail">Mode IPS inline sur pfSense<br>Rulesets: ET Open + Snort Community<br>Daily rule updates · Alerts → syslog → Wazuh</div>
+      <div class="tags"><span class="tag tids">IPS inline</span><span class="tag tids">ET Open rules</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">ntopng</div>
+      <div class="ndetail">Analyse trafic temps réel<br>Capture sur interface trunk<br>Top talkers · Anomaly detection</div>
+      <div class="tags"><span class="tag tids">Traffic analysis</span><span class="tag tids">7j historique</span></div>
+    </div>
+  </div>
+  <div class="note">pfSense crée des sous-interfaces 802.1Q sur vtnet1 — une par VLAN. Il assure le routage, le filtrage inter-VLAN, l'IPS/IDS (Suricata) et l'analyse trafic (ntopng).</div>
+</div>
+
+<div class="arrow">↓ <span class="alabel">vtnet1 trunk → vmbr0 → ens3 → SW1 Gi0/0 (tagged 802.1Q)</span></div>
+
+<!-- PROXMOX SINGLE NODE -->
+<div class="layer l-pve">
+  <div class="ltitle"><div class="dot" style="background:var(--v30)"></div><span style="color:var(--v30)">Proxmox VE — px01 · Single-Node · LVM Storage</span></div>
+  <div class="nodes">
+    <div class="node">
+      <div class="nname">px01 · 192.168.20.11</div>
+      <div class="ndetail">ens3 → SW1 Gi0/0 (trunk)<br>ens4 → ISP-R1 fa0/1 (WAN)<br>Storage: LVM local + snapshots quotidiens</div>
+      <div class="tags"><span class="tag t20">VLAN20</span><span class="tag t50">VLAN50</span><span class="tag t10">VLAN10</span><span class="tag t70">VLAN70</span></div>
+    </div>
+  </div>
+  <div class="nodes" style="margin-top:8px">
+    <div class="node">
+      <div class="nname">Bridge layout (px01)</div>
+      <div class="ndetail">
+        ens3 → <strong style="color:var(--text)">vmbr0</strong> (VLAN-aware) — trunk vers SW1<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ VLAN10/20/50/70 tagués vers pfSense vtnet1<br>
+        ens4 → <strong style="color:var(--text)">vmbr1</strong> — WAN bridge vers ISP-R1 (pfSense vtnet0)
+      </div>
+    </div>
+  </div>
+  <div class="nodes" style="margin-top:8px">
+    <div class="node">
+      <div class="nname">pfSense VM</div>
+      <div class="ndetail">Gateway + Firewall + IDS<br>Suricata + ntopng</div>
+      <div class="tags"><span class="tag tw">WAN</span><span class="tag t20">VLAN20</span><span class="tag t50">VLAN50</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">Wazuh VM</div>
+      <div class="ndetail">192.168.20.24/27<br>SIEM Manager + Dashboard</div>
+      <div class="tags"><span class="tag t20">VLAN20</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">MonSrv VM</div>
+      <div class="ndetail">Prometheus · Loki<br>Tempo · Grafana</div>
+      <div class="tags"><span class="tag t50">VLAN50</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span class="alabel">ens3 trunk → SW1 vIOS L2 — distribution des VLANs</span></div>
+
+<!-- SW1 -->
+<div class="layer l-sw">
+  <div class="ltitle"><div class="dot" style="background:var(--v10)"></div><span style="color:var(--v10)">SW1 — vIOS L2 Core switch · 8 ports</span></div>
+  <div class="nodes">
+    <div class="node">
+      <div class="nname">Gi0/0 — Trunk</div>
+      <div class="ndetail">→ px01 ens3<br>Tagged 802.1Q :<br>VLAN 10/20/50/70<br>Native VLAN 99</div>
+      <div class="tags"><span class="tag tm">Trunk all VLANs</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">Gi0/3-5 — Access</div>
+      <div class="ndetail">→ MonSrv · S1 · S2<br>Untagged VLAN50<br>DMZ servers</div>
+      <div class="tags"><span class="tag t50">Access VLAN50</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">Gi0/6 — Access</div>
+      <div class="ndetail">→ Postes clients / WiFi<br>Untagged VLAN10</div>
+      <div class="tags"><span class="tag t10">Access VLAN10</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">Gi0/1-2, Gi0/7</div>
+      <div class="ndetail">Spare — disponible<br>pour extension future</div>
+      <div class="tags"><span class="tag tm">Libre</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span class="alabel">Gi0/3-5 access VLAN50 → DMZ · Gi0/6 access VLAN10 → Clients</span></div>
+
+<!-- DMZ -->
+<div class="layer l-dmz">
+  <div class="ltitle"><div class="dot" style="background:var(--v50)"></div><span style="color:var(--v50)">DMZ — VLAN50 · 192.168.50.0/26</span></div>
+  <div class="nodes">
+    <div class="node">
+      <div class="nname">MonSrv</div>
+      <div class="ndetail">Prometheus · Loki<br>Tempo · Grafana<br>192.168.50.10/26</div>
+      <div class="tags"><span class="tag t50">ens4 · GW .50.1</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">S1</div>
+      <div class="ndetail">Apache · MySQL<br>OTEL · Alloy · Node Exp.<br>192.168.50.11/26</div>
+      <div class="tags"><span class="tag t50">ens4 · GW .50.1</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">S2</div>
+      <div class="ndetail">Nginx · Redis<br>Alloy · Node Exp.<br>192.168.50.12/26</div>
+      <div class="tags"><span class="tag t50">ens4 · GW .50.1</span></div>
+    </div>
+  </div>
+  <div class="note">Pas d'accès internet direct — tout le trafic passe par pfSense vtnet1.50 (192.168.50.1). Wazuh agents envoient les événements vers 192.168.20.24 via pfSense inter-VLAN.</div>
+</div>
+
+<!-- CLIENTS -->
+<div class="layer l-clients" style="margin-top:4px">
+  <div class="ltitle"><div class="dot" style="background:var(--v10)"></div><span style="color:var(--v10)">Clients / WiFi — VLAN10 · 192.168.10.0/24</span></div>
+  <div class="nodes">
+    <div class="node" style="flex:1">
+      <div class="nname">Postes clients / Points d'accès WiFi</div>
+      <div class="ndetail">SW1 Gi0/6 access VLAN10 · DHCP via pfSense (192.168.10.1)<br>Accès DMZ contrôlé par règles pfSense · jamais direct vers VLAN50</div>
+      <div class="tags"><span class="tag t10">VLAN10</span><span class="tag tm">DHCP 192.168.10.2-254</span></div>
+    </div>
+  </div>
+  <div class="note">Clients → VLAN10 → pfSense vtnet1.10 → règles firewall → VLAN50 DMZ (si autorisé par politique)</div>
+</div>
+
+<!-- MANAGEMENT -->
+<div class="layer l-mgmt" style="margin-top:4px">
+  <div class="ltitle"><div class="dot" style="background:var(--v20)"></div><span style="color:var(--v20)">Management — VLAN20 · 192.168.20.0/27</span></div>
+  <div class="nodes">
+    <div class="node">
+      <div class="nname">pfSense LAN</div>
+      <div class="ndetail">192.168.20.23/27<br>WebGUI admin</div>
+      <div class="tags"><span class="tag t20">vtnet1.20</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">Wazuh Manager</div>
+      <div class="ndetail">192.168.20.24/27<br>Dashboard :443 · Agent :1514</div>
+      <div class="tags"><span class="tag t20">VLAN20</span></div>
+    </div>
+    <div class="node">
+      <div class="nname">Proxmox WebUI</div>
+      <div class="ndetail">px01 192.168.20.11<br>Port 8006</div>
+      <div class="tags"><span class="tag t20">port 8006</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="panel">
+
+  <!-- VLAN plan -->
+  <div class="psection">
+    <div class="ptitle">Plan VLAN — VLSM</div>
+    <div class="vlan-row">
+      <span style="color:var(--v10);font-weight:500">VLAN10</span>
+      <span style="color:var(--muted)">192.168.10.0/24</span>
+      <span style="color:var(--muted)">/24</span>
+      <span style="color:var(--muted)">Clients / WiFi — DHCP</span>
+    </div>
+    <div class="vlan-row">
+      <span style="color:var(--v20);font-weight:500">VLAN20</span>
+      <span style="color:var(--muted)">192.168.20.0/27</span>
+      <span style="color:var(--muted)">/27</span>
+      <span style="color:var(--muted)">Management — pfSense, Wazuh, Proxmox</span>
+    </div>
+    <div class="vlan-row">
+      <span style="color:var(--v50);font-weight:500">VLAN50</span>
+      <span style="color:var(--muted)">192.168.50.0/26</span>
+      <span style="color:var(--muted)">/26</span>
+      <span style="color:var(--muted)">DMZ — serveurs applicatifs + monitoring</span>
+    </div>
+    <div class="vlan-row">
+      <span style="color:var(--v70);font-weight:500">VLAN70</span>
+      <span style="color:var(--muted)">192.168.70.0/28</span>
+      <span style="color:var(--muted)">/28</span>
+      <span style="color:var(--muted)">VPN clients OpenVPN (futur)</span>
+    </div>
+    <div class="vlan-row">
+      <span style="color:var(--mgmt);font-weight:500">VLAN99</span>
+      <span style="color:var(--muted)">—</span>
+      <span style="color:var(--muted)">—</span>
+      <span style="color:var(--muted)">Native VLAN (anti-hopping)</span>
+    </div>
+    <div class="note">VLAN99 native anti-hopping. Pas de VLAN30/40 (pas de cluster). 4 VLANs actifs + 1 native.</div>
+  </div>
+
+  <!-- SW1 port plan -->
+  <div class="psection">
+    <div class="ptitle">SW1 — Plan de câblage</div>
+    <div class="prow"><span class="pid" style="color:var(--v30)">Gi0/0</span><span class="pdesc">Trunk 802.1Q → px01 ens3</span></div>
+    <div class="prow"><span class="pid" style="color:var(--muted)">Gi0/1</span><span class="pdesc" style="color:var(--muted)">Spare (future extension)</span></div>
+    <div class="prow"><span class="pid" style="color:var(--muted)">Gi0/2</span><span class="pdesc" style="color:var(--muted)">Spare (future extension)</span></div>
+    <div class="prow"><span class="pid" style="color:var(--v50)">Gi0/3</span><span class="pdesc">Access VLAN50 → MonSrv ens4</span></div>
+    <div class="prow"><span class="pid" style="color:var(--v50)">Gi0/4</span><span class="pdesc">Access VLAN50 → S1 ens4</span></div>
+    <div class="prow"><span class="pid" style="color:var(--v50)">Gi0/5</span><span class="pdesc">Access VLAN50 → S2 ens4</span></div>
+    <div class="prow"><span class="pid" style="color:var(--v10)">Gi0/6</span><span class="pdesc">Access VLAN10 → Clients / WiFi</span></div>
+    <div class="prow"><span class="pid" style="color:var(--muted)">Gi0/7</span><span class="pdesc" style="color:var(--muted)">Spare</span></div>
+  </div>
+
+  <!-- pfSense interfaces -->
+  <div class="psection">
+    <div class="ptitle">pfSense VM — Interfaces</div>
+    <div class="kv">
+      <div class="kvrow"><span class="kk">vtnet0</span><span class="vv" style="color:var(--wan)">WAN → vmbr1 → ens4 → ISP-R1</span></div>
+      <div class="kvrow"><span class="kk">vtnet1</span><span class="vv" style="color:var(--v20)">Trunk → vmbr0 → ens3 → SW1</span></div>
+      <div class="kvrow"><span class="kk">vtnet1.10</span><span class="vv" style="color:var(--v10)">192.168.10.1/24 — Clients</span></div>
+      <div class="kvrow"><span class="kk">vtnet1.20</span><span class="vv" style="color:var(--v20)">192.168.20.23/27 — LAN mgmt</span></div>
+      <div class="kvrow"><span class="kk">vtnet1.50</span><span class="vv" style="color:var(--v50)">192.168.50.1/26 — DMZ</span></div>
+      <div class="kvrow"><span class="kk">vtnet1.70</span><span class="vv" style="color:var(--v70)">192.168.70.1/28 — VPN</span></div>
+    </div>
+    <div class="note">2 interfaces physiques seulement (vtnet0 + vtnet1). Les sous-interfaces 802.1Q gèrent tous les VLANs sur vtnet1. Suricata IPS inline + ntopng installés.</div>
+  </div>
+
+  <!-- IP assignments -->
+  <div class="psection">
+    <div class="ptitle">Adressage IP — Résumé</div>
+    <div class="kv">
+      <div class="kvrow"><span class="kk" style="color:var(--v20)">pfSense LAN</span><span class="vv">192.168.20.23/27</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v20)">Wazuh</span><span class="vv">192.168.20.24/27</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v20)">px01</span><span class="vv">192.168.20.11/27</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v50)">MonSrv</span><span class="vv">192.168.50.10/26</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v50)">S1</span><span class="vv">192.168.50.11/26</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v50)">S2</span><span class="vv">192.168.50.12/26</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v50)">GW DMZ</span><span class="vv">192.168.50.1 (pfSense)</span></div>
+      <div class="kvrow"><span class="kk" style="color:var(--v10)">GW Clients</span><span class="vv">192.168.10.1 (pfSense)</span></div>
+    </div>
+  </div>
+
+  <!-- Security Stack -->
+  <div class="psection">
+    <div class="ptitle">Stack Sécurité</div>
+    <div class="kv">
+      <div class="kvrow"><span class="kk">Firewall</span><span class="vv">pfSense ACLs (whitelist)</span></div>
+      <div class="kvrow"><span class="kk">IPS/IDS</span><span class="vv">Suricata inline (ET Open)</span></div>
+      <div class="kvrow"><span class="kk">Traffic</span><span class="vv">ntopng → real-time analysis</span></div>
+      <div class="kvrow"><span class="kk">SIEM</span><span class="vv">Wazuh agents → Manager → Dashboard</span></div>
+      <div class="kvrow"><span class="kk">Compliance</span><span class="vv">CIS Benchmark + PCI-DSS</span></div>
+      <div class="kvrow"><span class="kk">Isolation</span><span class="vv">VLAN99 native anti-hopping</span></div>
+    </div>
+  </div>
+
+  <!-- Monitoring stack -->
+  <div class="psection">
+    <div class="ptitle">Stack Monitoring</div>
+    <div class="kv">
+      <div class="kvrow"><span class="kk">Métriques</span><span class="vv">Node Exp. → Prometheus → Grafana</span></div>
+      <div class="kvrow"><span class="kk">Logs</span><span class="vv">Alloy → Loki → Grafana</span></div>
+      <div class="kvrow"><span class="kk">Traces</span><span class="vv">OTEL → Tempo → Grafana</span></div>
+      <div class="kvrow"><span class="kk">Sécurité</span><span class="vv">Wazuh agents → Manager → Dashboard</span></div>
+      <div class="kvrow"><span class="kk">Dashboards</span><span class="vv">6 vues Grafana + 20 alertes</span></div>
+      <div class="kvrow"><span class="kk">Export</span><span class="vv">PNG / PDF / CSV / JSON</span></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+</body>
+</html>

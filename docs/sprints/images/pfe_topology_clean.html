@@ -1,0 +1,159 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:1rem;font-size:13px;color:var(--color-text-primary)}
+.zone{border:0.5px solid var(--color-border-secondary);border-radius:12px;padding:10px 14px;margin-bottom:8px}
+.zone-label{font-size:11px;font-weight:500;letter-spacing:.04em;margin-bottom:8px;color:var(--color-text-secondary)}
+.row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.node{border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;flex:1;min-width:90px;cursor:pointer;transition:background .15s}
+.node:hover{background:var(--color-background-secondary)}
+.node-title{font-weight:500;font-size:12px;color:var(--color-text-primary)}
+.node-sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+.arrow{text-align:center;color:var(--color-text-tertiary);font-size:13px;padding:2px 0;display:flex;align-items:center;justify-content:center;gap:6px}
+.arrow span{font-size:11px;color:var(--color-text-secondary)}
+.pill{display:inline-block;font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;margin-top:3px}
+.internet{background:#E6F1FB;color:#0C447C}
+.wan{background:#FCEBEB;color:#791F1F}
+.vlan20{background:#EAF3DE;color:#27500A}
+.vlan50{background:#FAEEDA;color:#633806}
+.vlan30{background:#EEEDFE;color:#3C3489}
+.vlan40{background:#FBEAF0;color:#72243E}
+.mgmt{background:#F1EFE8;color:#444441}
+.connector{width:1px;background:var(--color-border-secondary);margin:0 auto;height:16px}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--color-border-tertiary)}
+.litem{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)}
+.ldot{width:8px;height:8px;border-radius:2px}
+</style>
+<div class="wrap">
+
+<div class="zone" style="border-color:#B5D4F4">
+  <div class="zone-label">Internet / ISP simulation</div>
+  <div class="row">
+    <div class="node" onclick="sendPrompt('What is Cloud0 NAT in EVE-NG?')">
+      <div class="node-title">Cloud0</div>
+      <div class="node-sub">NAT cloud</div>
+      <span class="pill internet">Internet</span>
+    </div>
+    <div class="node" onclick="sendPrompt('What is the role of the 3725 ISP router?')">
+      <div class="node-title">3725 — ISP-R1</div>
+      <div class="node-sub">fa0/0 → Cloud0</div>
+      <span class="pill wan">WAN uplink</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span>fa0/1-2/0 → pve1/2/3 ens4 (vmbr1 WAN)</span></div>
+
+<div class="zone" style="border-color:#F5C4B3">
+  <div class="zone-label">Firewall / routing layer — pfSense vm:101 (HA on Ceph)</div>
+  <div class="row">
+    <div class="node" onclick="sendPrompt('How does pfSense vtnet1 WAN work with HA across pve nodes?')">
+      <div class="node-title">vtnet1 — WAN</div>
+      <div class="node-sub">vmbr1 → ens4 → 3725</div>
+      <span class="pill wan">WAN</span>
+    </div>
+    <div class="node" onclick="sendPrompt('What is pfSense vtnet0 LAN used for?')">
+      <div class="node-title">vtnet0 — LAN</div>
+      <div class="node-sub">vmbr0 · 192.168.20.23</div>
+      <span class="pill vlan20">VLAN20</span>
+    </div>
+    <div class="node" onclick="sendPrompt('What is pfSense OPT1 used for?')">
+      <div class="node-title">vtnet2 — OPT1</div>
+      <div class="node-sub">vmbr2 · 192.168.50.1</div>
+      <span class="pill vlan50">VLAN50 DMZ</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span>vtnet2 → SW1 — VLAN50 into DMZ</span></div>
+
+<div class="zone" style="border-color:#7F77DD">
+  <div class="zone-label">Proxmox cluster — pfe-cluster (pve1 · pve2 · pve3)</div>
+  <div class="row">
+    <div class="node" onclick="sendPrompt('What bridges does each pve node need?')">
+      <div class="node-title">ens3 → SW1 trunk</div>
+      <div class="node-sub">Gi0/0-2 · all VLANs</div>
+      <span class="pill vlan20">VLAN20</span>
+      <span class="pill vlan50">VLAN50</span>
+      <span class="pill vlan30">VLAN30</span>
+      <span class="pill vlan40">VLAN40</span>
+    </div>
+    <div class="node" onclick="sendPrompt('Why does vmbr1 need to exist on all 3 pve nodes?')">
+      <div class="node-title">ens4 → 3725 WAN</div>
+      <div class="node-sub">vmbr1 — pfSense WAN bridge</div>
+      <span class="pill wan">On all 3 nodes for HA</span>
+    </div>
+  </div>
+  <div style="margin-top:8px">
+    <div class="row">
+      <div class="node" onclick="sendPrompt('Tell me about pfSense HA migration')">
+        <div class="node-title">pfSense vm:101</div>
+        <div class="node-sub">HA · currently pve3</div>
+        <span class="pill mgmt">Ceph disk</span>
+      </div>
+      <div class="node" onclick="sendPrompt('Tell me about Wazuh vm:102')">
+        <div class="node-title">Wazuh vm:102</div>
+        <div class="node-sub">192.168.20.24 · pve2</div>
+        <span class="pill vlan20">VLAN20</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span>SW1 — vIOS L2 core switch (Gi0/0-5)</span></div>
+
+<div class="zone" style="border-color:#EF9F27">
+  <div class="zone-label">SW1 — vIOS L2 core switch · 8 ports</div>
+  <div class="row">
+    <div class="node">
+      <div class="node-title">Gi0/0-2</div>
+      <div class="node-sub">pve1 / pve2 / pve3</div>
+      <span class="pill mgmt">Trunk all VLANs</span>
+    </div>
+    <div class="node">
+      <div class="node-title">Gi0/3-5</div>
+      <div class="node-sub">MonSrv / S1 / S2</div>
+      <span class="pill vlan50">Access VLAN50</span>
+    </div>
+    <div class="node">
+      <div class="node-title">Gi0/6-7</div>
+      <div class="node-sub">spare</div>
+      <span class="pill mgmt">Available</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓ <span>ens4 → switch access port VLAN50 — DMZ servers</span></div>
+
+<div class="zone" style="border-color:#1D9E75">
+  <div class="zone-label">DMZ — VLAN50 · 192.168.50.0/26</div>
+  <div class="row">
+    <div class="node" onclick="sendPrompt('Tell me about the monitoring server stack')">
+      <div class="node-title">MonSrv</div>
+      <div class="node-sub">Prometheus · Loki · Grafana</div>
+      <span class="pill vlan50">192.168.50.10</span>
+    </div>
+    <div class="node" onclick="sendPrompt('Tell me about S1 stack')">
+      <div class="node-title">S1</div>
+      <div class="node-sub">Apache · MySQL · OTEL</div>
+      <span class="pill vlan50">192.168.50.11</span>
+    </div>
+    <div class="node" onclick="sendPrompt('Tell me about S2 stack')">
+      <div class="node-title">S2</div>
+      <div class="node-sub">Nginx · Redis · Alloy</div>
+      <span class="pill vlan50">192.168.50.12</span>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="litem"><div class="ldot" style="background:#B5D4F4"></div> Internet/WAN</div>
+  <div class="litem"><div class="ldot" style="background:#F0997B"></div> Firewall (pfSense)</div>
+  <div class="litem"><div class="ldot" style="background:#AFA9EC"></div> Proxmox cluster</div>
+  <div class="litem"><div class="ldot" style="background:#EF9F27"></div> L2 switch</div>
+  <div class="litem"><div class="ldot" style="background:#5DCAA5"></div> DMZ — VLAN50</div>
+  <div class="litem"><div class="ldot" style="background:#C0DD97"></div> VLAN20 mgmt</div>
+  <div class="litem"><div class="ldot" style="background:#F4C0D1"></div> VLAN40 Ceph</div>
+  <div class="litem"><div class="ldot" style="background:#CECBF6"></div> VLAN30 Corosync</div>
+</div>
+</div>
