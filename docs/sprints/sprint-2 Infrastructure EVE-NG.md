@@ -294,6 +294,18 @@ Démarrer les nœuds dans cet ordre depuis l'interface WebUI EVE-NG :
 
 ---
 
+## Diagrammes
+
+### Diagramme d'Activité
+
+![Diagramme d'activité — Sprint 2](../diagrams/activity/sprint2.png)
+
+### Diagramme de Déploiement
+
+![Diagramme de déploiement — Sprint 2](../diagrams/deployment/sprint2.png)
+
+---
+
 ## Captures d'Écran
 
 ### 1. Topologie du Lab EVE-NG

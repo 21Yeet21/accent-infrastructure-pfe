@@ -131,6 +131,22 @@ Ces images disques sont ensuite exportées et converties au format qcow2 compati
 
 ---
 
+---
+
+## Diagramme d'Activité
+
+![Diagramme d'activité — Sprint 1](../diagrams/activity/sprint1.png)
+
+---
+
+---
+
+## Diagramme de Déploiement
+
+![Diagramme de déploiement — Sprint 1](../diagrams/deployment/sprint1.png)
+
+---
+
 ## Notes Importantes
 
 | Note | Détail |
