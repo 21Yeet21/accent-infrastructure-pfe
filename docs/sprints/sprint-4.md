@@ -442,4 +442,18 @@ ssh -L 9006:192.168.20.11:8006 root@192.168.20.11
 ```
 
 ---
-```
+
+---
+
+## Diagrammes
+
+### Diagramme d'Activité
+
+![Diagramme d'activité — Sprint 4](../diagrams/activity/sprint4.png)
+
+### Diagramme de Déploiement
+
+![Diagramme de déploiement — Sprint 4](../diagrams/deployment/sprint4.png)
+
+---
+
