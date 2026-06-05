@@ -134,13 +134,3 @@ Ce projet est distribué sous licence **MIT**. Voir le fichier [LICENSE](LICENSE
 ```
 
 ---
-
-### Résumé des modifications
-
-| Modification | Détail |
-|--------------|--------|
-| 🎨 Emojis retirés | Titres de sections sans emojis pour cohérence professionnelle |
-| 📁 Structure mise à jour | Ajout du dossier `docs/operations/` avec les 3 fichiers |
-| 📋 Nouvelle section | "Procédures Opérationnelles" avec tableau descriptif et liens |
-
-**Le dépôt est maintenant complet et prêt à être commité.** 🚀
