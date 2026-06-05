@@ -7,10 +7,18 @@ Diagrammes UML du projet, organisés par type et par sprint.
 ## 📂 Organisation
 
 ```
-diagrams/
-├── activity/        Diagrammes d'activité (.puml)
-├── deployment/      Diagrammes de déploiement (.puml)
-└── components/      Diagrammes de composants (.mmd)
+docs/diagrams/
+├── activity/
+│   └── sprint1-9.png          ← 1 diagramme d'activité couvrant tous les sprints
+├── components/
+│   └── sprint5-7.png          ← 1 diagramme de composants pour les sprints 5-7
+└── deployment/
+    ├── sprint1.png            ← Diagramme de déploiement Sprint 1
+    ├── sprint2.png            ← Diagramme de déploiement Sprint 2
+    ├── sprint3.png            ← Diagramme de déploiement Sprint 3
+    ├── sprint4.png            ← Diagramme de déploiement Sprint 4
+    ├── sprint8.png            ← Diagramme de déploiement Sprint 8
+    └── sprint9.png            ← Diagramme de déploiement Sprint 9
 ```
 
 ---
