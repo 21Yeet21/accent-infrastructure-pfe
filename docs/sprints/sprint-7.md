@@ -346,4 +346,4 @@ Lorsque le Node Exporter S1 redevient accessible, Grafana détecte automatiqueme
 ![Diagramme de composants — Sprint 7](../diagrams/components/sprint7.png)
 
 ---
-```
+
