@@ -1,11 +1,9 @@
+Here's the cleaned version:
 
-## Fichier : `docs/operations/monitoring-tests.md`
-
-```markdown
 # Tests de Validation — Stack de Monitoring (S1 & S2)
 
-> **Version** : 1.0  
-> **Dernière mise à jour** : 2026-05-22  
+> **Version** : 1.0
+> **Dernière mise à jour** : 2026-05-22
 > **Objectif** : Générer du trafic réaliste sur S1 et S2 pour valider la collecte des métriques, logs et traces dans Grafana, Prometheus, Loki et Tempo.
 
 ---
@@ -71,7 +69,7 @@ ssh ayoub@localhost  # entrer un mauvais mot de passe
 
 ```bash
 # Opérations DB basiques (CREATE, INSERT, SELECT)
-docker exec -it mysql mysql -uroot -p<MYSQL_PASSWORD> -e "
+docker exec -it mysql mysql -uroot -p<REDACTED> -e "
   CREATE DATABASE IF NOT EXISTS testdb;
   USE testdb;
   CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(50));
@@ -81,7 +79,7 @@ docker exec -it mysql mysql -uroot -p<MYSQL_PASSWORD> -e "
 "
 
 # Opérations étendues (UPDATE, SELECT filtré)
-docker exec -it mysql mysql -uroot -p<MYSQL_PASSWORD> -e "
+docker exec -it mysql mysql -uroot -p<REDACTED> -e "
   USE testdb;
   UPDATE users SET name='dave' WHERE id=1;
   SELECT * FROM users WHERE id=1;
@@ -90,7 +88,7 @@ docker exec -it mysql mysql -uroot -p<MYSQL_PASSWORD> -e "
 "
 
 # Nettoyage
-docker exec -it mysql mysql -uroot -p<MYSQL_PASSWORD> -e "DROP DATABASE IF EXISTS testdb;"
+docker exec -it mysql mysql -uroot -p<REDACTED> -e "DROP DATABASE IF EXISTS testdb;"
 ```
 
 ### Génération d'erreurs (pour Loki)
@@ -216,7 +214,7 @@ done
 stress --cpu 4 --timeout 60 &
 for i in {1..50}; do curl -s http://localhost:8080/ > /dev/null; done
 for i in {1..20}; do curl -s http://localhost:8080/notfound > /dev/null; done
-docker exec -it mysql mysql -uroot -p<MYSQL_PASSWORD> -e "
+docker exec -it mysql mysql -uroot -p<REDACTED> -e "
   CREATE DATABASE IF NOT EXISTS testdb;
   USE testdb;
   CREATE TABLE IF NOT EXISTS t (id INT);
@@ -309,5 +307,24 @@ curl -s http://192.168.50.12:9100/metrics | head -3   # S2
 curl -s http://192.168.50.12:9121/metrics | head -3   # Redis
 curl -s http://192.168.20.11:9100/metrics | head -3   # pve1
 ```
+
+---
+
+## What I Changed
+
+| Before | After |
+|--------|-------|
+| `<MYSQL_PASSWORD>` | `<REDACTED>` (consistent with our convention) |
+| All escaped `\*\*`, `\#`, `\---` | Clean markdown formatting |
+
+---
+
+**Now let's fix that push error. Run the grep commands in Git Bash to find remaining secrets:**
+
+```bash
+grep -rn "hooks.slack.com" .
+grep -rn "admin123" .
+grep -rn "vpnAccent" .
 ```
 
+**Paste the output and I'll tell you exactly which files to fix! 🚀**
