@@ -1,0 +1,48 @@
+conf t
+vlan 10
+ name CLIENTS
+vlan 20
+ name MANAGEMENT
+vlan 50
+ name DMZ
+vlan 70
+ name VPN
+vlan 99
+ name NATIVE
+exit
+interface Gi0/0
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,50,70
+ no shutdown
+interface Gi0/1
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,50,70
+ no shutdown
+interface Gi0/2
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,50,70
+ no shutdown
+interface Gi0/3
+ switchport mode access
+ switchport access vlan 50
+ no shutdown
+interface Gi1/0
+ switchport mode access
+ switchport access vlan 50
+ no shutdown
+interface Gi1/1
+ switchport mode access
+ switchport access vlan 50
+ no shutdown
+interface Gi1/2
+ switchport mode access
+ switchport access vlan 10
+ no shutdown
+end
+wr

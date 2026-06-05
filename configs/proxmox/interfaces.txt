@@ -1,0 +1,36 @@
+auto lo
+iface lo inet loopback
+
+iface ens3 inet manual
+
+auto vmbr0
+iface vmbr0 inet manual
+        bridge-ports ens3
+        bridge-stp off
+        bridge-fd 0
+        bridge-vlan-aware yes
+        bridge-vids 10 20 50 70 99
+        post-up bridge vlan add dev vmbr0 vid 10 self
+        post-up bridge vlan add dev vmbr0 vid 20 self
+        post-up bridge vlan add dev vmbr0 vid 50 self
+        post-up bridge vlan add dev vmbr0 vid 70 self
+
+auto vmbr0.20
+iface vmbr0.20 inet static
+        address 192.168.20.11/27
+        gateway 192.168.20.23
+        post-up ip route add 192.168.50.0/26 via 192.168.20.23 dev vmbr0.20
+        post-up ip route add 192.168.10.0/24 via 192.168.20.23 dev vmbr0.20
+        post-up ip route add 192.168.70.0/28 via 192.168.20.23 dev vmbr0.20
+
+auto vmbr1
+iface vmbr1 inet manual
+        bridge-ports ens4
+        bridge-stp off
+        bridge-fd 0
+
+iface ens4 inet manual
+iface ens5 inet manual
+iface ens6 inet manual
+iface ens7 inet manual
+iface ens8 inet manual

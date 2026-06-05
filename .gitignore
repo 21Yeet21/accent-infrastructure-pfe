@@ -1,0 +1,78 @@
+# ============================================================
+# ACCENT Project — Git Ignore Rules
+# ============================================================
+
+# ---------- Secrets et données sensibles ----------
+*.key
+*.pem
+*.crt
+*.pfx
+*.p12
+secrets.yml
+secrets.yaml
+.env
+.env.local
+.env.production
+**/passwords.txt
+**/credentials.txt
+**/credentials.json
+wazuh-passwords*
+
+# ---------- Fichiers système ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*.bak
+*~
+
+# ---------- IDE et éditeurs ----------
+.vscode/
+.idea/
+*.sublime-*
+*.code-workspace
+
+# ---------- Logs et données temporaires ----------
+*.log
+logs/
+tmp/
+temp/
+
+# ---------- Volumes Docker locaux ----------
+*-data/
+volumes/
+prometheus-data/
+grafana-data/
+loki-data/
+tempo-data/
+
+# ---------- Backups et archives ----------
+*.backup
+*.bak
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# ---------- Images disques (trop volumineuses) ----------
+*.vmdk
+*.qcow2
+*.iso
+*.img
+*.ova
+*.ovf
+
+# ---------- Build et dépendances ----------
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+dist/
+build/
+
+# ---------- Configurations locales spécifiques ----------
+*.local.yml
+*.local.yaml
+local-config/

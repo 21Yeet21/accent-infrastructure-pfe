@@ -1,0 +1,15 @@
+---
+type: qemu
+description: Ubuntu S2
+name: ubuntu-s2-1.0
+cpulimit: 1
+icon: Server-2D-Linux-S.svg
+cpu: 2
+ram: 2048
+ethernet: 2
+console: vnc
+shutdown: 1
+qemu_arch: x86_64
+qemu_nic: virtio-net-pci
+qemu_version: 2.4.0
+qemu_options: -machine type=pc,accel=kvm -vga std -usbdevice tablet -boot order=c -cpu host

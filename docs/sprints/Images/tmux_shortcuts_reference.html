@@ -1,0 +1,120 @@
+
+<style>
+  h2.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+  .prefix-badge { display: inline-block; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 4px 12px; font-family: var(--font-mono); font-size: 13px; color: var(--color-text-primary); margin-bottom: 1.5rem; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .tab { padding: 5px 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); font-size: 13px; cursor: pointer; background: transparent; color: var(--color-text-secondary); transition: background 0.15s, color 0.15s; }
+  .tab.active { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-primary); font-weight: 500; }
+  .tab:hover:not(.active) { background: var(--color-background-secondary); }
+  .section { display: none; }
+  .section.active { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  tr { border-bottom: 0.5px solid var(--color-border-tertiary); }
+  tr:last-child { border-bottom: none; }
+  td { padding: 8px 6px; color: var(--color-text-primary); }
+  td:first-child { width: 42%; }
+  kbd { display: inline-block; font-family: var(--font-mono); font-size: 12px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-secondary); border-radius: 4px; padding: 2px 7px; color: var(--color-text-primary); white-space: nowrap; }
+  .desc { color: var(--color-text-secondary); font-size: 13px; }
+  .note { font-size: 12px; color: var(--color-text-tertiary); margin-top: 1rem; padding-top: 0.75rem; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+
+<h2 class="sr-only">Tmux keyboard shortcuts reference — browse by category using the tabs below.</h2>
+
+<div style="margin: 1rem 0 0.25rem;">
+  <span style="font-size: 13px; color: var(--color-text-secondary);">Prefix key:</span>
+  <span class="prefix-badge">Ctrl + B</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('sessions')">Sessions</button>
+  <button class="tab" onclick="show('windows')">Windows</button>
+  <button class="tab" onclick="show('panes')">Panes</button>
+  <button class="tab" onclick="show('copy')">Copy mode</button>
+  <button class="tab" onclick="show('misc')">Misc</button>
+</div>
+
+<div id="sessions" class="section active">
+  <table>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>$</kbd></td><td><span class="desc">Rename current session</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>d</kbd></td><td><span class="desc">Detach from session (keep it running)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>s</kbd></td><td><span class="desc">List & switch sessions interactively</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>(</kbd></td><td><span class="desc">Switch to previous session</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>)</kbd></td><td><span class="desc">Switch to next session</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>L</kbd></td><td><span class="desc">Switch to last (most recent) session</span></td></tr>
+  </table>
+  <div style="margin-top: 1rem; font-size: 13px; color: var(--color-text-secondary);">Command line:</div>
+  <table style="margin-top: 6px;">
+    <tr><td><kbd>tmux new -s name</kbd></td><td><span class="desc">New session with name</span></td></tr>
+    <tr><td><kbd>tmux attach -t name</kbd></td><td><span class="desc">Reattach to a session</span></td></tr>
+    <tr><td><kbd>tmux ls</kbd></td><td><span class="desc">List all sessions</span></td></tr>
+    <tr><td><kbd>tmux kill-session -t name</kbd></td><td><span class="desc">Kill a session</span></td></tr>
+  </table>
+</div>
+
+<div id="windows" class="section">
+  <table>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>c</kbd></td><td><span class="desc">Create new window</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>,</kbd></td><td><span class="desc">Rename current window</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>&</kbd></td><td><span class="desc">Close current window (asks confirmation)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>n</kbd></td><td><span class="desc">Next window</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>p</kbd></td><td><span class="desc">Previous window</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>0–9</kbd></td><td><span class="desc">Switch to window by number</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>w</kbd></td><td><span class="desc">Visual window list & switcher</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>f</kbd></td><td><span class="desc">Find window by name</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>l</kbd></td><td><span class="desc">Toggle to last window</span></td></tr>
+  </table>
+</div>
+
+<div id="panes" class="section">
+  <table>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>"</kbd></td><td><span class="desc">Split pane horizontally (top/bottom)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>%</kbd></td><td><span class="desc">Split pane vertically (left/right)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>x</kbd></td><td><span class="desc">Close current pane</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>↑ ↓ ← →</kbd></td><td><span class="desc">Move between panes</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>;</kbd></td><td><span class="desc">Toggle to last active pane</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>o</kbd></td><td><span class="desc">Cycle through panes</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>z</kbd></td><td><span class="desc">Zoom/unzoom current pane (fullscreen toggle)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>!</kbd></td><td><span class="desc">Break pane into its own window</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>q</kbd></td><td><span class="desc">Show pane numbers (press number to jump)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>Space</kbd></td><td><span class="desc">Cycle through layout presets</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>Ctrl+↑/↓/←/→</kbd></td><td><span class="desc">Resize pane</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>{</kbd></td><td><span class="desc">Swap pane with previous</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>}</kbd></td><td><span class="desc">Swap pane with next</span></td></tr>
+  </table>
+</div>
+
+<div id="copy" class="section">
+  <table>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>[</kbd></td><td><span class="desc">Enter copy mode (scroll / select text)</span></td></tr>
+    <tr><td><kbd>Space</kbd></td><td><span class="desc">Start selection (in copy mode)</span></td></tr>
+    <tr><td><kbd>Enter</kbd></td><td><span class="desc">Copy selection & exit copy mode</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>]</kbd></td><td><span class="desc">Paste from tmux buffer</span></td></tr>
+    <tr><td><kbd>q</kbd> or <kbd>Esc</kbd></td><td><span class="desc">Exit copy mode</span></td></tr>
+    <tr><td><kbd>↑ ↓</kbd> / <kbd>PgUp PgDn</kbd></td><td><span class="desc">Scroll in copy mode</span></td></tr>
+    <tr><td><kbd>/ </kbd></td><td><span class="desc">Search forward in copy mode</span></td></tr>
+    <tr><td><kbd>?</kbd></td><td><span class="desc">Search backward in copy mode</span></td></tr>
+    <tr><td><kbd>n</kbd> / <kbd>N</kbd></td><td><span class="desc">Next / previous search result</span></td></tr>
+  </table>
+  <p class="note">Copy mode uses vi-style keys by default. Add <kbd>set-window-option -g mode-keys vi</kbd> to <kbd>~/.tmux.conf</kbd> for full vi bindings.</p>
+</div>
+
+<div id="misc" class="section">
+  <table>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>?</kbd></td><td><span class="desc">Show all key bindings (built-in help)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>:</kbd></td><td><span class="desc">Open tmux command prompt</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>t</kbd></td><td><span class="desc">Show clock in current pane</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>~</kbd></td><td><span class="desc">Show tmux messages log</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>r</kbd></td><td><span class="desc">Reload config (if bound in .tmux.conf)</span></td></tr>
+    <tr><td><kbd>Ctrl+B</kbd> <kbd>I</kbd></td><td><span class="desc">Install plugins (if using tpm)</span></td></tr>
+  </table>
+  <p class="note">Tip: <kbd>Ctrl+B</kbd> <kbd>?</kbd> always works inside any session to see your current bindings.</p>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>

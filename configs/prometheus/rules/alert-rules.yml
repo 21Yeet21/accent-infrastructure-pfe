@@ -1,0 +1,140 @@
+groups:
+  - name: s1-alerts
+    interval: 60s
+    rules:
+      - alert: S1_CPU_High
+        expr: 100 - (avg(rate(node_cpu_seconds_total{job="s1-node", mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          host: s1
+        annotations:
+          summary: "CPU usage élevé sur S1 (> 85%)"
+          description: "L'utilisation CPU de S1 dépasse 85% depuis 5 minutes. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: S1_RAM_High
+        expr: (1 - (node_memory_MemAvailable_bytes{job="s1-node"} / node_memory_MemTotal_bytes{job="s1-node"})) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          host: s1
+        annotations:
+          summary: "Utilisation RAM élevée sur S1 (> 85%)"
+          description: "L'utilisation RAM de S1 dépasse 85% depuis 5 minutes. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: S1_Disk_Critical
+        expr: 100 - ((node_filesystem_avail_bytes{job="s1-node", mountpoint="/"} / node_filesystem_size_bytes{job="s1-node", mountpoint="/"}) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+          host: s1
+        annotations:
+          summary: "Espace disque critique sur S1 (> 90%)"
+          description: "L'espace disque de S1 dépasse 90% d'utilisation. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: S1_Down
+        expr: up{job="s1-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          host: s1
+        annotations:
+          summary: "S1 indisponible"
+          description: "Node Exporter sur S1 ne répond pas depuis plus d'une minute."
+
+  - name: s2-alerts
+    interval: 60s
+    rules:
+      - alert: S2_CPU_High
+        expr: 100 - (avg(rate(node_cpu_seconds_total{job="s2-node", mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          host: s2
+        annotations:
+          summary: "CPU usage élevé sur S2 (> 85%)"
+          description: "L'utilisation CPU de S2 dépasse 85% depuis 5 minutes. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: S2_RAM_High
+        expr: (1 - (node_memory_MemAvailable_bytes{job="s2-node"} / node_memory_MemTotal_bytes{job="s2-node"})) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          host: s2
+        annotations:
+          summary: "Utilisation RAM élevée sur S2 (> 85%)"
+          description: "L'utilisation RAM de S2 dépasse 85% depuis 5 minutes. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: S2_Disk_Critical
+        expr: 100 - ((node_filesystem_avail_bytes{job="s2-node", mountpoint="/"} / node_filesystem_size_bytes{job="s2-node", mountpoint="/"}) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+          host: s2
+        annotations:
+          summary: "Espace disque critique sur S2 (> 90%)"
+          description: "L'espace disque de S2 dépasse 90% d'utilisation. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: S2_Down
+        expr: up{job="s2-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          host: s2
+        annotations:
+          summary: "S2 indisponible"
+          description: "Node Exporter sur S2 ne répond pas depuis plus d'une minute."
+
+      - alert: S2_Redis_Down
+        expr: redis_up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          host: s2
+          service: redis
+        annotations:
+          summary: "Redis indisponible sur S2"
+          description: "Le service Redis sur S2 ne répond pas depuis plus d'une minute."
+
+  - name: pve1-alerts
+    interval: 60s
+    rules:
+      - alert: PVE1_CPU_High
+        expr: 100 - (avg(rate(node_cpu_seconds_total{job="pve1-node", mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: warning
+          host: pve1
+        annotations:
+          summary: "CPU usage élevé sur pve1 (> 90%)"
+          description: "L'utilisation CPU de pve1 dépasse 90% depuis 5 minutes. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: PVE1_RAM_High
+        expr: (1 - (node_memory_MemAvailable_bytes{job="pve1-node"} / node_memory_MemTotal_bytes{job="pve1-node"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          host: pve1
+        annotations:
+          summary: "Utilisation RAM élevée sur pve1 (> 90%)"
+          description: "L'utilisation RAM de pve1 dépasse 90% depuis 5 minutes. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: PVE1_Disk_Critical
+        expr: 100 - ((node_filesystem_avail_bytes{job="pve1-node", mountpoint="/"} / node_filesystem_size_bytes{job="pve1-node", mountpoint="/"}) * 100) > 85
+        for: 5m
+        labels:
+          severity: critical
+          host: pve1
+        annotations:
+          summary: "Espace disque critique sur pve1 (> 85%)"
+          description: "L'espace disque de pve1 dépasse 85% d'utilisation. Valeur actuelle : {{ $value | printf \"%.1f\" }}%"
+
+      - alert: PVE1_Down
+        expr: up{job="pve1-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          host: pve1
+        annotations:
+          summary: "pve1 indisponible"
+          description: "Node Exporter sur pve1 ne répond pas depuis plus d'une minute."

@@ -1,0 +1,62 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#dae8fc', 'primaryBorderColor': '#333333', 'secondaryColor': '#d5e8d4', 'tertiaryColor': '#fff2cc', 'edgeLabelBackground': '#ffffff', 'fontFamily': 'arial'}}}%%
+flowchart LR
+
+subgraph DS["Datasources"]
+  direction TB
+  PROM["Prometheus\nUID: PBFA97CFB590B2093"]
+  LOKI["Loki\nUID: P8E80F9AEF21F6940"]
+  TEMPO["Tempo\nUID: P214B5B846CF3925F"]
+end
+
+Q1(["PromQL"])
+Q2(["LogQL"])
+Q3(["TraceQL"])
+
+subgraph DASHBOARDS["7 Dashboards Grafana"]
+  direction TB
+  D1["Overview\nS1, S2, pve1"]
+  D2["Metrics S1 / S2"]
+  D3["Logs S1 / S2"]
+  D4["Traces Apache / MySQL"]
+  D5["Redis Cache"]
+end
+
+subgraph ALERTS["17 Regles d'Alerte - eval 60s"]
+  direction TB
+  A1["S1\nCPU, RAM, Disk, dispo"]
+  A2["S2\nCPU, RAM, Disk, dispo, Redis"]
+  A3["pve1\nCPU, RAM, Disk, dispo"]
+  A4["Securite\nBrute Force SSH x2\nHTTP 500 x2"]
+end
+
+WH(["webhook\nIncoming"])
+
+SLACK["Slack\n#accent-alerts\nFiring < 2min\nAuto-resolution"]
+
+PROM --> Q1 --> DASHBOARDS
+LOKI --> Q2 --> DASHBOARDS
+TEMPO --> Q3 --> DASHBOARDS
+
+DASHBOARDS --> ALERTS
+ALERTS --> WH --> SLACK
+
+style DS fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style DASHBOARDS fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style ALERTS fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style PROM fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style LOKI fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style TEMPO fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style D1 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style D2 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style D3 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style D4 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style D5 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style A1 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style A2 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style A3 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style A4 fill:#ffe6cc,stroke:#d6a000,stroke-width:1px,color:#000000
+style Q1 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style Q2 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style Q3 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style WH fill:#ffe6cc,stroke:#d6a000,stroke-width:1px,color:#000000
+style SLACK fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000

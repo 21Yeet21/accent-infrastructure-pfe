@@ -1,0 +1,35 @@
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    volumes:
+      - ../../alloy/s2-config.alloy:/etc/alloy/config.alloy:ro
+      - /var/log:/var/log:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    command: run /etc/alloy/config.alloy
+    restart: unless-stopped
+    network_mode: host
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    network_mode: host
+    environment:
+      - REDIS_ADDR=redis://127.0.0.1:6379
+    restart: unless-stopped

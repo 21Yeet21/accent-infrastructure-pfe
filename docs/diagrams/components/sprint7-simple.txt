@@ -1,0 +1,43 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#dae8fc', 'primaryBorderColor': '#333333', 'secondaryColor': '#d5e8d4', 'tertiaryColor': '#fff2cc', 'edgeLabelBackground': '#ffffff', 'fontFamily': 'arial'}}}%%
+flowchart LR
+
+subgraph DS["Datasources"]
+  direction TB
+  PROM["Prometheus\nUID fixe"]
+  LOKI["Loki\nUID fixe"]
+  TEMPO["Tempo\nUID fixe"]
+end
+
+Q1(["metriques"])
+Q2(["logs"])
+Q3(["traces"])
+
+subgraph GRAF["Grafana"]
+  direction TB
+  DASH["7 Dashboards\nOverview, Metrics S1/S2,\nLogs S1/S2, Traces, Redis"]
+  ALERT["17 Regles d'Alerte\nS1, S2, pve1, Securite\neval 60s"]
+end
+
+WH(["webhook"])
+
+SLACK["Slack\n#accent-alerts"]
+
+PROM --> Q1 --> DASH
+LOKI --> Q2 --> DASH
+TEMPO --> Q3 --> DASH
+
+DASH --> ALERT
+ALERT --> WH --> SLACK
+
+style DS fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style GRAF fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style PROM fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style LOKI fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style TEMPO fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style DASH fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style ALERT fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style Q1 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style Q2 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style Q3 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style WH fill:#ffe6cc,stroke:#d6a000,stroke-width:1px,color:#000000
+style SLACK fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000

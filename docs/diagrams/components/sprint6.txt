@@ -1,0 +1,63 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#dae8fc', 'primaryBorderColor': '#333333', 'secondaryColor': '#d5e8d4', 'tertiaryColor': '#fff2cc', 'edgeLabelBackground': '#ffffff', 'fontFamily': 'arial'}}}%%
+flowchart LR
+
+subgraph SOURCES["Sources de Donnees"]
+  direction TB
+  S1_LOG["S1\nApache, MySQL,\nSSH, System"]
+  S2_LOG["S2\nNginx, SSH, System"]
+  S1_APP["S1\nApache, MySQL"]
+end
+
+subgraph AGENTS["Agents de Collecte"]
+  direction TB
+  ALLOY1["Grafana Alloy S1"]
+  ALLOY2["Grafana Alloy S2"]
+  OTEL["OpenTelemetry Collector"]
+end
+
+L1(["logs hostname/job/type"])
+L2(["logs hostname/job/type"])
+T1(["traces gRPC :4317"])
+
+subgraph BACKENDS["MonSrv — Backends"]
+  direction TB
+  LOKI["Loki\nport 3100\nretention 12h lab / 30j prod"]
+  TEMPO["Tempo 2.3.0\nport 3200"]
+end
+
+LBL1(["labels"])
+LBL2(["labels"])
+LBL3(["rootServiceName"])
+
+GRAF["Grafana"]
+
+S1_LOG --> ALLOY1
+S2_LOG --> ALLOY2
+S1_APP --> OTEL
+
+ALLOY1 --> L1 --> LOKI
+ALLOY2 --> L2 --> LOKI
+OTEL --> T1 --> TEMPO
+
+LOKI --> LBL1 --> GRAF
+LOKI --> LBL2 --> GRAF
+TEMPO --> LBL3 --> GRAF
+
+style SOURCES fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style AGENTS fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style BACKENDS fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style S1_LOG fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style S2_LOG fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style S1_APP fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style ALLOY1 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style ALLOY2 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style OTEL fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style LOKI fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style TEMPO fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style L1 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style L2 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style T1 fill:#ffe6cc,stroke:#d6a000,stroke-width:1px,color:#000000
+style LBL1 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style LBL2 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style LBL3 fill:#ffe6cc,stroke:#d6a000,stroke-width:1px,color:#000000
+style GRAF fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000

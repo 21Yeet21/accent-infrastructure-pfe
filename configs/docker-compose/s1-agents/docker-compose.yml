@@ -1,0 +1,36 @@
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    volumes:
+      - ../../alloy/s1-config.alloy:/etc/alloy/config.alloy:ro
+      - /var/log:/var/log:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    command: run /etc/alloy/config.alloy
+    restart: unless-stopped
+    network_mode: host
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    network_mode: host
+    volumes:
+      - ../../otel/otel-collector.yml:/etc/otel-collector.yml:ro
+    command: --config=/etc/otel-collector.yml
+    restart: unless-stopped

@@ -1,0 +1,63 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#dae8fc', 'primaryBorderColor': '#333333', 'secondaryColor': '#d5e8d4', 'tertiaryColor': '#fff2cc', 'edgeLabelBackground': '#ffffff', 'fontFamily': 'arial'}}}%%
+flowchart LR
+
+subgraph SC["Serveurs Cibles"]
+  direction TB
+  NE1["Node Exporter S1"]
+  NE2["Node Exporter S2"]
+  NE3["Node Exporter pve1"]
+  RE["Redis Exporter S2"]
+end
+
+SC1(["scrape :9100"])
+SC2(["scrape :9100"])
+SC3(["scrape :9100"])
+SC4(["scrape :9121"])
+
+subgraph MON["MonSrv — Stack Docker"]
+  direction TB
+  PROM["Prometheus - port 9090"]
+  LOKI["Loki - port 3100 - deploye"]
+  TEMPO["Tempo - port 3200 - deploye"]
+end
+
+MET(["metriques"])
+LOG(["logs"])
+TRC(["traces"])
+
+GRAF["Grafana - port 3000"]
+
+VOL[("Volumes Persistants\nprometheus-data\ngrafana-data\nloki-data\ntempo-data")]
+
+NE1 --> SC1 --> PROM
+NE2 --> SC2 --> PROM
+NE3 --> SC3 --> PROM
+RE  --> SC4 --> PROM
+
+PROM --> MET --> GRAF
+LOKI --> LOG --> GRAF
+TEMPO --> TRC --> GRAF
+
+PROM -.->|persist| VOL
+LOKI -.->|persist| VOL
+TEMPO -.->|persist| VOL
+GRAF -.->|persist| VOL
+
+style SC fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style MON fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style NE1 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style NE2 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style NE3 fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style RE fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style PROM fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style LOKI fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style TEMPO fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+style SC1 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style SC2 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style SC3 fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style SC4 fill:#ffe6cc,stroke:#d6a000,stroke-width:1px,color:#000000
+style MET fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style LOG fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style TRC fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:#000000
+style GRAF fill:#dae8fc,stroke:#333333,stroke-width:2px,color:#000000
+style VOL fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000

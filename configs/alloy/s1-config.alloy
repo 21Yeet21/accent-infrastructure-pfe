@@ -1,0 +1,41 @@
+loki.write "default" {
+  endpoint {
+    url = "http://192.168.50.10:3100/loki/api/v1/push"
+  }
+  external_labels = {}
+}
+
+loki.source.journal "ssh_logs" {
+  max_age = "168h"
+  matches = "_SYSTEMD_UNIT=ssh.service"
+  labels = {
+    job      = "ssh",
+    hostname = "server1",
+  }
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.source.journal "system_logs" {
+  max_age = "168h"
+  labels = {
+    job      = "system",
+    hostname = "server1",
+  }
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.source.file "apache_logs" {
+  targets = [
+    {__path__ = "/var/log/apache2/access.log", job = "apache", hostname = "server1", type = "access"},
+    {__path__ = "/var/log/apache2/error.log",  job = "apache", hostname = "server1", type = "error"},
+  ]
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.source.file "mysql_logs" {
+  targets = [
+    {__path__ = "/var/log/mysql/general.log", job = "mysql", hostname = "server1", type = "general"},
+    {__path__ = "/var/log/mysql/error.log",   job = "mysql", hostname = "server1", type = "error"},
+  ]
+  forward_to = [loki.write.default.receiver]
+}
