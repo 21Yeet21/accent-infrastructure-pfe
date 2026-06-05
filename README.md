@@ -133,4 +133,3 @@ Ces procédures incluent également des sections de **dépannage** pour les prob
 Ce projet est distribué sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 ```
 
----
