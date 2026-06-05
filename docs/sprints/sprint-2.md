@@ -307,7 +307,6 @@ Démarrer les nœuds dans cet ordre depuis l'interface WebUI EVE-NG :
 ---
 
 ## Captures d'Écran
-## Captures d'Écran
 
 ### 1. Topologie du Lab EVE-NG
 
