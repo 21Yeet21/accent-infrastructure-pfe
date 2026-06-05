@@ -1,6 +1,4 @@
-Voici le `README.md` complet et mis à jour avec les deux nouvelles intégrations :
 
-```markdown
 # ACCENT — Infrastructure Observabilité & Sécurité
 
 > Projet de Fin d'Études — Infrastructure complète d'observabilité et de sécurité déployée en environnement virtualisé (EVE-NG, Proxmox VE) avec une stack Grafana, Wazuh HIDS et haute disponibilité.
