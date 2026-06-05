@@ -1,1050 +1,404 @@
-# \# Sprint 6 — Logs et Traces : Loki, Tempo, Alloy, OpenTelemetry
 
-# 
+# Sprint 6 — Logs et Traces : Loki, Tempo, Alloy, OpenTelemetry
 
-# \## Objectif
+## Objectif
 
-# 
+Mettre en place la collecte centralisée des **journaux (logs)** et des **traces distribuées** pour les serveurs S1 et S2. Ce sprint complète la stack d'observabilité en ajoutant les deux piliers manquants : **logs** via Grafana Loki + Grafana Alloy, et **traces** via Grafana Tempo + OpenTelemetry Collector.
 
-# Mettre en place la collecte centralisée des \*\*journaux (logs)\*\* et des \*\*traces distribuées\*\* pour les serveurs S1 et S2. Ce sprint complète la stack d'observabilité en ajoutant les deux piliers manquants : \*\*logs\*\* via Grafana Loki + Grafana Alloy, et \*\*traces\*\* via Grafana Tempo + OpenTelemetry Collector.
+---
 
-# 
+## Architecture d'observabilité complète
 
-# \---
+```
+                    ┌─────────────────────────────────┐
+                    │           MonSrv                │
+                    │  Prometheus  Loki  Tempo  Grafana│
+                    └────────────────┬────────────────┘
+                                     │
+              ┌──────────────────────┼──────────────────────┐
+              │                                             │
+    ┌─────────▼──────────┐                      ┌──────────▼──────────┐
+    │        S1          │                      │        S2           │
+    │  Alloy (logs)      │                      │  Alloy (logs)       │
+    │  Node Exporter     │                      │  Node Exporter      │
+    │  OTel Collector    │                      │  Redis Exporter     │
+    │  Apache + MySQL    │                      │  Nginx              │
+    │  Trace Generators  │                      │                     │
+    └────────────────────┘                      └─────────────────────┘
+```
 
-# 
+Les trois piliers de l'observabilité sont désormais couverts :
 
-# \## Architecture d'observabilité complète
+| Pilier | Outil | Source |
+|--------|-------|--------|
+| Métriques | Prometheus + Node Exporter | S1, S2, pve1 |
+| Logs | Loki + Grafana Alloy | S1, S2 |
+| Traces | Tempo + OpenTelemetry | S1 |
 
-# 
+---
 
-# ```
+## 1. Grafana Loki — Collecte des logs
 
-# &#x20;                   ┌─────────────────────────────────┐
+### Présentation
 
-# &#x20;                   │           MonSrv                │
+**Grafana Loki** est un système d'agrégation de logs conçu pour être économique en ressources. Contrairement à Elasticsearch, Loki n'indexe pas le contenu des logs mais uniquement leurs **labels** (métadonnées), ce qui réduit considérablement la consommation mémoire et disque.
 
-# &#x20;                   │  Prometheus  Loki  Tempo  Grafana│
+Loki stocke les logs en blocs compressés sur le système de fichiers local (`/loki/chunks`). Ce stockage est monté comme volume Docker persistant sur MonSrv, garantissant que les logs survivent aux redémarrages des conteneurs.
 
-# &#x20;                   └────────────────┬────────────────┘
+### Configuration
 
-# &#x20;                                    │
+La configuration complète de Loki est disponible dans le dépôt :
 
-# &#x20;             ┌──────────────────────┼──────────────────────┐
+- **Fichier** : [`configs/loki/loki-config.yaml`](../../configs/loki/loki-config.yaml)
 
-# &#x20;             │                                             │
+Points clés de la configuration :
 
-# &#x20;   ┌─────────▼──────────┐                      ┌──────────▼──────────┐
+- **Stockage filesystem** : les chunks sont écrits dans `/loki/chunks` sur le volume Docker persistant
+- **Schema v13 (TSDB)** : format d'index moderne optimisé pour les requêtes
+- **`creation_grace_period: 3h`** : tolère un léger décalage horaire entre les agents Alloy et le serveur Loki, évitant le rejet des logs dont le timestamp est légèrement en avance
+- **`allow_structured_metadata: false`** : désactivé pour économiser les ressources dans l'environnement de lab
 
-# &#x20;   │        S1          │                      │        S2           │
+### Rétention des logs — Choix de configuration
 
-# &#x20;   │  Alloy (logs)      │                      │  Alloy (logs)       │
+Dans ce lab, la rétention des logs est gérée par la durée de vie des blocs Loki. Deux paramètres clés sont configurés selon le contexte :
 
-# &#x20;   │  Node Exporter     │                      │  Node Exporter      │
+**En environnement de lab :** les logs sont conservés **12 heures**. Ce choix est délibéré — le lab génère un volume de logs continu (Apache, MySQL, Nginx, SSH, système) qui s'accumule rapidement. Une rétention courte évite de saturer le disque de MonSrv qui dispose d'un espace limité dans l'environnement virtualisé.
 
-# &#x20;   │  OTel Collector    │                      │  Redis Exporter     │
+**En production chez ACCENT :** la rétention serait configurée à **7 jours minimum**, voire 30 jours pour les logs de sécurité (SSH, système). Loki supporte nativement cette configuration via son compacteur :
 
-# &#x20;   │  Apache + MySQL    │                      │  Nginx              │
+```yaml
+limits_config:
+  retention_period: 720h   # 30 jours
 
-# &#x20;   │  Trace Generators  │                      │                     │
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
+```
 
-# &#x20;   └────────────────────┘                      └─────────────────────┘
+Avec un stockage objet (S3, MinIO), Loki peut conserver des mois ou des années de logs sans contrainte de disque local — c'est l'architecture recommandée pour ACCENT.
 
-# ```
+---
 
-# 
+## 2. Grafana Tempo — Collecte des traces
 
-# Les trois piliers de l'observabilité sont désormais couverts :
+### Présentation
 
-# 
+**Grafana Tempo** est un backend de traces distribué compatible avec les protocoles **OpenTelemetry**, Jaeger et Zipkin. Il stocke les traces sous forme de blocs compressés sur le système de fichiers local ou dans un stockage objet.
 
-# | Pilier | Outil | Source |
+### Configuration
 
-# |--------|-------|--------|
+La configuration complète de Tempo est disponible dans le dépôt :
 
-# | Métriques | Prometheus + Node Exporter | S1, S2, pve1 |
+- **Fichier** : [`configs/tempo/tempo.yaml`](../../configs/tempo/tempo.yaml)
 
-# | Logs | Loki + Grafana Alloy | S1, S2 |
+Tempo écoute sur deux protocoles OTLP :
 
-# | Traces | Tempo + OpenTelemetry | S1 |
+- **gRPC** sur le port **4317** — utilisé par l'OTel Collector de S1
+- **HTTP** sur le port **4318** — alternative HTTP/protobuf
 
-# 
+> **Rétention :** La rétention des traces est fixée à **12 heures** dans ce lab pour les mêmes raisons que Loki — économie d'espace disque. En production, une rétention de **7 jours** minimum serait appliquée, avec un stockage objet pour les traces long terme.
 
-# \---
+> **Note technique :** La version `grafana/tempo:2.3.0` est utilisée à la place de `latest`. Les versions récentes de Tempo requièrent une architecture AMD64 v2 (AVX2), incompatible avec l'environnement de virtualisation imbriquée (EVE-NG → Proxmox → VM). La version 2.3.0 est la dernière compatible avec ce contexte.
 
-# 
+---
 
-# \## 1. Grafana Loki — Collecte des logs
+## 3. Grafana Alloy — Agent de collecte des logs
 
-# 
+### Présentation
 
-# \### Présentation
+**Grafana Alloy** est l'agent de collecte de logs et de métriques de nouvelle génération de Grafana Labs. Il remplace Promtail et Grafana Agent avec une configuration unifiée en langage **River** (`.alloy`).
 
-# 
+Alloy est déployé sur **S1 et S2** pour collecter :
 
-# \*\*Grafana Loki\*\* est un système d'agrégation de logs conçu pour être économique en ressources. Contrairement à Elasticsearch, Loki n'indexe pas le contenu des logs mais uniquement leurs \*\*labels\*\* (métadonnées), ce qui réduit considérablement la consommation mémoire et disque.
+- Les journaux **systemd** (SSH, système)
+- Les fichiers de logs des services (Apache, MySQL sur S1 ; Nginx sur S2)
 
-# 
+### Configuration
 
-# Loki stocke les logs en blocs compressés sur le système de fichiers local (`/loki/chunks`). Ce stockage est monté comme volume Docker persistant sur MonSrv, garantissant que les logs survivent aux redémarrages des conteneurs.
+Les configurations complètes d'Alloy sont disponibles dans le dépôt :
 
-# 
+- **S1** : [`configs/alloy/s1-config.alloy`](../../configs/alloy/s1-config.alloy)
+- **S2** : [`configs/alloy/s2-config.alloy`](../../configs/alloy/s2-config.alloy)
 
-# \### Configuration Loki (`loki-config.yaml`)
+Chaque configuration définit :
 
-# 
+- Un composant `loki.write "default"` pointant vers Loki sur MonSrv (`http://192.168.50.10:3100/loki/api/v1/push`)
+- Des sources `loki.source.journal` pour les logs systemd (SSH, système) avec `max_age = "168h"` pour la résilience
+- Des sources `loki.source.file` pour les logs applicatifs (Apache/MySQL sur S1, Nginx sur S2)
 
-# ```yaml
+### Labels utilisés
 
-# auth\_enabled: false
+Chaque stream de logs dans Loki est identifié par ses labels :
 
-# 
+| Label | Valeurs possibles | Description |
+|-------|-------------------|-------------|
+| `job` | apache, mysql, nginx, ssh, system | Type de service |
+| `hostname` | server1, server2 | Serveur source |
+| `type` | access, error, general | Type de log |
 
-# server:
+---
 
-# &#x20; http\_listen\_port: 3100
+## 4. Persistance des logs — Conception de la résilience
 
-# 
+### Persistance sur MonSrv
 
-# common:
+Les données Loki sont stockées dans un répertoire local monté comme volume Docker :
 
-# &#x20; path\_prefix: /loki
+```yaml
+loki:
+  volumes:
+    - ./loki-data:/loki
+```
 
-# &#x20; storage:
+Ce répertoire survit aux redémarrages du conteneur Loki et aux redémarrages de MonSrv. Les logs ingérés restent disponibles dans Grafana même après un arrêt complet du lab.
 
-# &#x20;   filesystem:
+Les permissions sont définies explicitement via le script [`scripts/setup-volumes.sh`](../../scripts/setup-volumes.sh) pour garantir l'écriture sans droits root :
 
-# &#x20;     chunks\_directory: /loki/chunks
+```bash
+chown -R 10001:10001 ~/monitoring-stack/loki-data
+```
 
-# &#x20;     rules\_directory: /loki/rules
+### Résilience côté agents — Le rôle du paramètre `max_age`
 
-# &#x20; replication\_factor: 1
+Le paramètre `max_age = "168h"` configuré sur les sources journal d'Alloy est le mécanisme clé de résilience. Il définit jusqu'où dans le passé Alloy doit relire les journaux systemd au démarrage.
 
-# &#x20; ring:
+**Scénario typique sans `max_age` :** Si S1 s'arrête pendant 6 heures (maintenance, panne), au redémarrage Alloy ne renvoie que les nouvelles entrées. Les 6 heures de logs SSH et système pendant la panne sont perdues dans Loki.
 
-# &#x20;   instance\_addr: 127.0.0.1
+**Avec `max_age = "168h"` :** Au redémarrage d'Alloy, le système relit les journaux systemd des 7 derniers jours et renvoie tout ce qui n'a pas encore été ingéré par Loki. La continuité des logs est garantie même après une interruption prolongée d'un serveur.
 
-# &#x20;   kvstore:
+Ce mécanisme couvre également le cas où **MonSrv lui-même redémarre** : Alloy continue de stocker les logs localement dans son buffer et les renvoie dès que Loki est de nouveau disponible.
 
-# &#x20;     store: inmemory
+### Positions files — Suivi de lecture des fichiers
 
-# 
+Pour les sources fichiers (Apache, MySQL, Nginx), Alloy maintient des **fichiers de positions** (`positions.yml`) qui enregistrent la dernière position de lecture dans chaque fichier log. Ces fichiers sont stockés dans un volume persistant :
 
-# schema\_config:
+```yaml
+alloy:
+  volumes:
+    - alloy_data:/data-alloy
+```
 
-# &#x20; configs:
+Grâce à ces positions files, Alloy reprend exactement là où il s'était arrêté après un redémarrage — aucun log n'est envoyé deux fois, et aucun n'est manqué.
 
-# &#x20;   - from: 2020-10-24
+---
 
-# &#x20;     store: tsdb
+## 5. OpenTelemetry Collector — Collecte des traces sur S1
 
-# &#x20;     object\_store: filesystem
+### Présentation
 
-# &#x20;     schema: v13
+L'**OpenTelemetry Collector** est déployé sur S1 pour recevoir les traces générées par les services applicatifs et les transmettre à Tempo sur MonSrv.
 
-# &#x20;     index:
+### Configuration
 
-# &#x20;       prefix: index\_
+La configuration complète de l'OTel Collector est disponible dans le dépôt :
 
-# &#x20;       period: 24h
+- **Fichier** : [`configs/otel/otel-collector.yml`](../../configs/otel/otel-collector.yml)
 
-# 
+Points clés de la configuration :
 
-# limits\_config:
+- **Récepteurs OTLP** : gRPC (4317) et HTTP (4318) pour recevoir les traces des générateurs
+- **Processeur batch** : regroupe les spans avant envoi pour optimiser les performances
+- **Deux pipelines distincts** :
+  - `traces` → Tempo via gRPC (port 4317)
+  - `logs` → Loki via HTTP (port 3100)
 
-# &#x20; allow\_structured\_metadata: false
+---
 
-# &#x20; reject\_old\_samples: false
+## 6. Générateurs de traces
 
-# &#x20; creation\_grace\_period: 3h
+Pour simuler une activité applicative réaliste et démontrer les capacités de tracing, deux **générateurs de traces** sont déployés sur S1 :
 
-# ```
+### Apache Trace Generator
 
-# 
+Ce générateur surveille les logs d'accès Apache en temps réel et crée une trace OpenTelemetry pour chaque requête HTTP détectée. La trace inclut :
 
-# > \*\*Note :\*\* Le paramètre `creation\_grace\_period: 3h` tolère un léger décalage horaire entre les agents Alloy et le serveur Loki, évitant le rejet des logs dont le timestamp est légèrement en avance par rapport à l'horloge de Loki.
+- La méthode HTTP (GET, POST...)
+- L'URL demandée
+- Le code de réponse HTTP
+- La durée de traitement
 
-# 
+### MySQL Trace Generator
 
-# \### Rétention des logs — Choix de configuration
+Ce générateur intercepte les requêtes MySQL dans le general log et crée des traces pour chaque opération de base de données, permettant de visualiser les requêtes SQL dans Grafana Tempo.
 
-# 
+Les traces sont envoyées au format **OTLP gRPC** vers l'OTel Collector local, qui les relaie ensuite à Tempo.
 
-# Dans ce lab, la rétention des logs est gérée par la durée de vie des blocs Loki. Deux paramètres clés sont configurés selon le contexte :
+---
 
-# 
+## 7. Stack Docker Compose sur S1
 
-# \*\*En environnement de lab :\*\* les logs sont conservés \*\*12 heures\*\*. Ce choix est délibéré — le lab génère un volume de logs continu (Apache, MySQL, Nginx, SSH, système) qui s'accumule rapidement. Une rétention courte évite de saturer le disque de MonSrv qui dispose d'un espace limité dans l'environnement virtualisé.
+La stack complète déployée sur S1 est définie dans le fichier :
 
-# 
+- **Fichier** : [`configs/docker-compose/s1-agents/docker-compose.yml`](../../configs/docker-compose/s1-agents/docker-compose.yml)
 
-# \*\*En production chez ACCENT :\*\* la rétention serait configurée à \*\*7 jours minimum\*\*, voire 30 jours pour les logs de sécurité (SSH, système). Loki supporte nativement cette configuration via son compacteur :
+Services déployés :
 
-# 
+| Service | Rôle |
+|---------|------|
+| `alloy` | Collecte des logs (systemd + fichiers) vers Loki |
+| `node-exporter` | Exposition des métriques système (port 9100) |
+| `apache` | Serveur web HTTP (port 8080) |
+| `mysql` | Base de données MySQL (port 3306) |
+| `otel-collector` | Collecte et relais des traces vers Tempo |
+| `apache-trace-generator` | Génération de traces à partir des logs Apache |
+| `mysql-trace-generator` | Génération de traces à partir des logs MySQL |
 
-# ```yaml
+La stack sur S2 est similaire (sans les générateurs de traces) :
 
-# limits\_config:
+- **Fichier** : [`configs/docker-compose/s2-agents/docker-compose.yml`](../../configs/docker-compose/s2-agents/docker-compose.yml)
 
-# &#x20; retention\_period: 720h   # 30 jours
+---
 
-# 
+## 8. Vérification de la collecte
 
-# compactor:
+### Vérification des labels Loki
 
-# &#x20; working\_directory: /loki/compactor
+```bash
+curl -s "http://192.168.50.10:3100/loki/api/v1/labels" | python3 -m json.tool
+```
 
-# &#x20; retention\_enabled: true
+Résultat attendu :
 
-# &#x20; retention\_delete\_delay: 2h
+```json
+{
+  "status": "success",
+  "data": ["filename", "hostname", "job", "service_name", "type"]
+}
+```
 
-# &#x20; delete\_request\_store: filesystem
+### Vérification des jobs actifs
 
-# ```
+```bash
+curl -s "http://192.168.50.10:3100/loki/api/v1/label/job/values" | python3 -m json.tool
+```
 
-# 
+Résultat attendu :
 
-# Avec un stockage objet (S3, MinIO), Loki peut conserver des mois ou des années de logs sans contrainte de disque local — c'est l'architecture recommandée pour ACCENT.
+```json
+{
+  "status": "success",
+  "data": ["apache", "mysql", "nginx", "ssh", "system"]
+}
+```
 
-# 
+### Vérification des traces dans Tempo
 
-# \---
+```bash
+curl -s "http://192.168.50.10:3200/api/search?limit=5" | python3 -m json.tool | grep "rootServiceName"
+```
 
-# 
+Résultat attendu :
 
-# \## 2. Grafana Tempo — Collecte des traces
+```
+"rootServiceName": "apache"
+"rootServiceName": "mysql"
+```
 
-# 
+---
 
-# \### Présentation
+## Résultat
 
-# 
+À l'issue de ce sprint, la collecte des logs et des traces est opérationnelle :
 
-# \*\*Grafana Tempo\*\* est un backend de traces distribué compatible avec les protocoles \*\*OpenTelemetry\*\*, Jaeger et Zipkin. Il stocke les traces sous forme de blocs compressés sur le système de fichiers local ou dans un stockage objet.
+| Source | Logs collectés | Statut |
+|--------|----------------|--------|
+| S1 | Apache access/error, MySQL, SSH, System | ✅ |
+| S2 | Nginx access/error, SSH, System | ✅ |
+| S1 | Traces Apache (HTTP requests) | ✅ |
+| S1 | Traces MySQL (SQL queries) | ✅ |
 
-# 
+La stack d'observabilité complète (**métriques + logs + traces**) est fonctionnelle et accessible via Grafana sur MonSrv.
 
-# \### Configuration Tempo (`tempo.yaml`)
+---
 
-# 
+## Diagrammes
 
-# ```yaml
+### Diagramme d'Activité
 
-# server:
+![Diagramme d'activité — Sprint 6](../diagrams/activity/sprint6.png)
 
-# &#x20; http\_listen\_port: 3200
+### Diagramme de Composants
 
-# 
+![Diagramme de composants — Sprint 6](../diagrams/components/sprint6.png)
 
-# distributor:
+---
 
-# &#x20; receivers:
+## Captures d'Écran
 
-# &#x20;   otlp:
+### 1. Loki — Labels disponibles
 
-# &#x20;     protocols:
+```bash
+curl -s "http://192.168.50.10:3100/loki/api/v1/labels" | python3 -m json.tool
+```
 
-# &#x20;       grpc:
+**Montrer :** Les labels hostname, job, service_name, type confirmant la réception des logs
 
-# &#x20;         endpoint: 0.0.0.0:4317
+### 2. Loki — Jobs actifs
 
-# &#x20;       http:
+```bash
+curl -s "http://192.168.50.10:3100/loki/api/v1/label/job/values" | python3 -m json.tool
+```
 
-# &#x20;         endpoint: 0.0.0.0:4318
+**Montrer :** apache, mysql, nginx, ssh, system tous présents
 
-# 
+### 3. Grafana Explore — Logs Apache S1
 
-# storage:
+Grafana → Explore → Loki → `{job="apache", hostname="server1"}`  
+**Montrer :** Logs Apache avec timestamps, lignes de requêtes HTTP visibles
 
-# &#x20; trace:
+### 4. Grafana Explore — Logs SSH S2
 
-# &#x20;   backend: local
+Grafana → Explore → Loki → `{job="ssh", hostname="server2"}`  
+**Montrer :** Logs SSH avec connexions acceptées visibles
 
-# &#x20;   local:
+### 5. Grafana — Dashboard Logs S1
 
-# &#x20;     path: /tmp/tempo/blocks
+`http://192.168.50.12/grafana/` → **Logs S1**  
+**Montrer :** Panneaux Apache access, SSH logins, system logs avec données
 
-# 
+### 6. Grafana — Dashboard Logs S2
 
-# compactor:
+`http://192.168.50.12/grafana/` → **Logs S2**  
+**Montrer :** Panneaux Nginx access, SSH, system logs avec données
 
-# &#x20; compaction:
+### 7. Tempo — Traces disponibles
 
-# &#x20;   block\_retention: 12h
+```bash
+curl -s "http://192.168.50.10:3200/api/search?limit=5" | python3 -m json.tool
+```
 
-# ```
+**Montrer :** Traces Apache et MySQL avec traceID, rootServiceName, timestamps
 
-# 
+### 8. Grafana — Dashboard Traces
 
-# Tempo écoute sur deux protocoles OTLP :
+`http://192.168.50.12/grafana/` → **Traces Dashboard**  
+**Montrer :** Panneaux Apache Traces et MySQL Traces avec données visibles
 
-# 
+### 9. Grafana Explore — Trace détaillée
 
-# \- \*\*gRPC\*\* sur le port \*\*4317\*\* — utilisé par l'OTel Collector de S1
+Grafana → Explore → Tempo → cliquer sur un traceID Apache  
+**Montrer :** Vue détaillée d'une trace avec spans, durée, attributs HTTP
 
-# \- \*\*HTTP\*\* sur le port \*\*4318\*\* — alternative HTTP/protobuf
+### 10. Alloy — Logs de démarrage S1
 
-# 
+```bash
+docker logs alloy 2>&1 | grep "start tailing" | head -10
+```
 
-# > \*\*Rétention :\*\* La rétention des traces est fixée à \*\*12 heures\*\* dans ce lab pour les mêmes raisons que Loki — économie d'espace disque. En production, une rétention de \*\*7 jours\*\* minimum serait appliquée, avec un stockage objet pour les traces long terme.
+**Montrer :** Alloy démarrant et commençant à surveiller les fichiers Apache, MySQL
 
-# 
+### 11. Volumes persistants MonSrv
 
-# > \*\*Note technique :\*\* La version `grafana/tempo:2.3.0` est utilisée à la place de `latest`. Les versions récentes de Tempo requièrent une architecture AMD64 v2 (AVX2), incompatible avec l'environnement de virtualisation imbriquée (EVE-NG → Proxmox → VM). La version 2.3.0 est la dernière compatible avec ce contexte.
+```bash
+ls -lh ~/monitoring-stack/loki-data/chunks/
+```
 
-# 
+**Montrer :** Blocs de logs Loki stockés sur disque confirmant la persistance
+```
 
-# \---
 
-# 
+| 📝 Captures d'écran restructurées | Liste détaillée avec commandes pour reproduire |
 
-# \## 3. Grafana Alloy — Agent de collecte des logs
-
-# 
-
-# \### Présentation
-
-# 
-
-# \*\*Grafana Alloy\*\* est l'agent de collecte de logs et de métriques de nouvelle génération de Grafana Labs. Il remplace Promtail et Grafana Agent avec une configuration unifiée en langage \*\*River\*\* (`.alloy`).
-
-# 
-
-# Alloy est déployé sur \*\*S1 et S2\*\* pour collecter :
-
-# 
-
-# \- Les journaux \*\*systemd\*\* (SSH, système)
-
-# \- Les fichiers de logs des services (Apache, MySQL sur S1 ; Nginx sur S2)
-
-# 
-
-# \### Configuration Alloy S1 (`config.alloy`)
-
-# 
-
-# ```hcl
-
-# loki.write "default" {
-
-# &#x20; endpoint {
-
-# &#x20;   url = "http://192.168.50.10:3100/loki/api/v1/push"
-
-# &#x20; }
-
-# &#x20; external\_labels = {}
-
-# }
-
-# 
-
-# loki.source.journal "ssh\_logs" {
-
-# &#x20; max\_age = "168h"
-
-# &#x20; matches = "\_SYSTEMD\_UNIT=ssh.service"
-
-# &#x20; labels = {
-
-# &#x20;   job      = "ssh",
-
-# &#x20;   hostname = "server1",
-
-# &#x20; }
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# 
-
-# loki.source.journal "system\_logs" {
-
-# &#x20; max\_age = "168h"
-
-# &#x20; labels = {
-
-# &#x20;   job      = "system",
-
-# &#x20;   hostname = "server1",
-
-# &#x20; }
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# 
-
-# loki.source.file "apache\_logs" {
-
-# &#x20; targets = \[
-
-# &#x20;   {\_\_path\_\_ = "/var/log/apache2/access\_log", job = "apache", hostname = "server1", type = "access"},
-
-# &#x20;   {\_\_path\_\_ = "/var/log/apache2/error\_log",  job = "apache", hostname = "server1", type = "error"},
-
-# &#x20; ]
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# 
-
-# loki.source.file "mysql\_logs" {
-
-# &#x20; targets = \[
-
-# &#x20;   {\_\_path\_\_ = "/var/log/mysql/general.log", job = "mysql", hostname = "server1", type = "general"},
-
-# &#x20;   {\_\_path\_\_ = "/var/log/mysql/error.log",   job = "mysql", hostname = "server1", type = "error"},
-
-# &#x20; ]
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# ```
-
-# 
-
-# \### Configuration Alloy S2 (`config.alloy`)
-
-# 
-
-# ```hcl
-
-# loki.write "default" {
-
-# &#x20; endpoint {
-
-# &#x20;   url = "http://192.168.50.10:3100/loki/api/v1/push"
-
-# &#x20; }
-
-# &#x20; external\_labels = {}
-
-# }
-
-# 
-
-# loki.source.journal "ssh\_logs" {
-
-# &#x20; max\_age = "168h"
-
-# &#x20; matches = "\_SYSTEMD\_UNIT=ssh.service"
-
-# &#x20; labels = {
-
-# &#x20;   job      = "ssh",
-
-# &#x20;   hostname = "server2",
-
-# &#x20; }
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# 
-
-# loki.source.journal "system\_logs" {
-
-# &#x20; max\_age = "168h"
-
-# &#x20; labels = {
-
-# &#x20;   job      = "system",
-
-# &#x20;   hostname = "server2",
-
-# &#x20; }
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# 
-
-# loki.source.file "nginx\_logs" {
-
-# &#x20; targets = \[
-
-# &#x20;   {\_\_path\_\_ = "/var/log/nginx/access.log", job = "nginx", hostname = "server2", type = "access"},
-
-# &#x20;   {\_\_path\_\_ = "/var/log/nginx/error.log",  job = "nginx", hostname = "server2", type = "error"},
-
-# &#x20; ]
-
-# &#x20; forward\_to = \[loki.write.default.receiver]
-
-# }
-
-# ```
-
-# 
-
-# \### Labels utilisés
-
-# 
-
-# Chaque stream de logs dans Loki est identifié par ses labels :
-
-# 
-
-# | Label | Valeurs possibles | Description |
-
-# |-------|-------------------|-------------|
-
-# | `job` | apache, mysql, nginx, ssh, system | Type de service |
-
-# | `hostname` | server1, server2 | Serveur source |
-
-# | `type` | access, error, general | Type de log |
-
-# 
-
-# \---
-
-# 
-
-# \## 4. Persistance des logs — Conception de la résilience
-
-# 
-
-# \### Persistance sur MonSrv
-
-# 
-
-# Les données Loki sont stockées dans un répertoire local monté comme volume Docker :
-
-# 
-
-# ```yaml
-
-# loki:
-
-# &#x20; volumes:
-
-# &#x20;   - ./loki-data:/loki
-
-# ```
-
-# 
-
-# Ce répertoire survit aux redémarrages du conteneur Loki et aux redémarrages de MonSrv. Les logs ingérés restent disponibles dans Grafana même après un arrêt complet du lab.
-
-# 
-
-# Les permissions sont définies explicitement pour garantir l'écriture sans droits root :
-
-# 
-
-# ```bash
-
-# chown -R 10001:10001 \~/monitoring-stack/loki-data
-
-# ```
-
-# 
-
-# \### Résilience côté agents — Le rôle du paramètre `max\_age`
-
-# 
-
-# Le paramètre `max\_age = "168h"` configuré sur les sources journal d'Alloy est le mécanisme clé de résilience. Il définit jusqu'où dans le passé Alloy doit relire les journaux systemd au démarrage.
-
-# 
-
-# \*\*Scénario typique sans `max\_age` :\*\* Si S1 s'arrête pendant 6 heures (maintenance, panne), au redémarrage Alloy ne renvoie que les nouvelles entrées. Les 6 heures de logs SSH et système pendant la panne sont perdues dans Loki.
-
-# 
-
-# \*\*Avec `max\_age = "168h"` :\*\* Au redémarrage d'Alloy, le système relit les journaux systemd des 7 derniers jours et renvoie tout ce qui n'a pas encore été ingéré par Loki. La continuité des logs est garantie même après une interruption prolongée d'un serveur.
-
-# 
-
-# Ce mécanisme couvre également le cas où \*\*MonSrv lui-même redémarre\*\* : Alloy continue de stocker les logs localement dans son buffer et les renvoie dès que Loki est de nouveau disponible.
-
-# 
-
-# \### Positions files — Suivi de lecture des fichiers
-
-# 
-
-# Pour les sources fichiers (Apache, MySQL, Nginx), Alloy maintient des \*\*fichiers de positions\*\* (`positions.yml`) qui enregistrent la dernière position de lecture dans chaque fichier log. Ces fichiers sont stockés dans un volume persistant :
-
-# 
-
-# ```yaml
-
-# alloy:
-
-# &#x20; volumes:
-
-# &#x20;   - alloy\_data:/data-alloy
-
-# ```
-
-# 
-
-# Grâce à ces positions files, Alloy reprend exactement là où il s'était arrêté après un redémarrage — aucun log n'est envoyé deux fois, et aucun n'est manqué.
-
-# 
-
-# \---
-
-# 
-
-# \## 5. OpenTelemetry Collector — Collecte des traces sur S1
-
-# 
-
-# \### Présentation
-
-# 
-
-# L'\*\*OpenTelemetry Collector\*\* est déployé sur S1 pour recevoir les traces générées par les services applicatifs et les transmettre à Tempo sur MonSrv.
-
-# 
-
-# \### Configuration OTel Collector (`otel-collector.yml`)
-
-# 
-
-# ```yaml
-
-# receivers:
-
-# &#x20; otlp:
-
-# &#x20;   protocols:
-
-# &#x20;     grpc:
-
-# &#x20;       endpoint: 0.0.0.0:4317
-
-# &#x20;     http:
-
-# &#x20;       endpoint: 0.0.0.0:4318
-
-# 
-
-# processors:
-
-# &#x20; batch:
-
-# 
-
-# exporters:
-
-# &#x20; otlp\_grpc/tempo:
-
-# &#x20;   endpoint: "192.168.50.10:4317"
-
-# &#x20;   tls:
-
-# &#x20;     insecure: true
-
-# &#x20; otlp\_http/loki:
-
-# &#x20;   endpoint: "http://192.168.50.10:3100/otlp"
-
-# 
-
-# service:
-
-# &#x20; pipelines:
-
-# &#x20;   traces:
-
-# &#x20;     receivers: \[otlp]
-
-# &#x20;     processors: \[batch]
-
-# &#x20;     exporters: \[otlp\_grpc/tempo]
-
-# &#x20;   logs:
-
-# &#x20;     receivers: \[otlp]
-
-# &#x20;     processors: \[batch]
-
-# &#x20;     exporters: \[otlp\_http/loki]
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## 6. Générateurs de traces
-
-# 
-
-# Pour simuler une activité applicative réaliste et démontrer les capacités de tracing, deux \*\*générateurs de traces\*\* sont déployés sur S1 :
-
-# 
-
-# \### Apache Trace Generator
-
-# 
-
-# Ce générateur surveille les logs d'accès Apache en temps réel et crée une trace OpenTelemetry pour chaque requête HTTP détectée. La trace inclut :
-
-# 
-
-# \- La méthode HTTP (GET, POST...)
-
-# \- L'URL demandée
-
-# \- Le code de réponse HTTP
-
-# \- La durée de traitement
-
-# 
-
-# \### MySQL Trace Generator
-
-# 
-
-# Ce générateur intercepte les requêtes MySQL dans le general log et crée des traces pour chaque opération de base de données, permettant de visualiser les requêtes SQL dans Grafana Tempo.
-
-# 
-
-# Les traces sont envoyées au format \*\*OTLP gRPC\*\* vers l'OTel Collector local, qui les relaie ensuite à Tempo.
-
-# 
-
-# \---
-
-# 
-
-# \## 7. Stack Docker Compose sur S1
-
-# 
-
-# ```yaml
-
-# services:
-
-# &#x20; alloy:
-
-# &#x20;   image: grafana/alloy:latest
-
-# &#x20;   container\_name: alloy
-
-# &#x20;   volumes:
-
-# &#x20;     - ./config.alloy:/etc/alloy/config.alloy
-
-# &#x20;     - /var/log:/var/log:ro
-
-# &#x20;     - /run/log/journal:/run/log/journal:ro
-
-# &#x20;     - /etc/machine-id:/etc/machine-id:ro
-
-# &#x20;     - alloy\_data:/data-alloy
-
-# &#x20;   command: run /etc/alloy/config.alloy
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# &#x20; node-exporter:
-
-# &#x20;   image: prom/node-exporter:latest
-
-# &#x20;   container\_name: node-exporter
-
-# &#x20;   network\_mode: host
-
-# &#x20;   pid: host
-
-# &#x20;   volumes:
-
-# &#x20;     - /proc:/host/proc:ro
-
-# &#x20;     - /sys:/host/sys:ro
-
-# &#x20;     - /:/rootfs:ro
-
-# &#x20;   command:
-
-# &#x20;     - '--path.procfs=/host/proc'
-
-# &#x20;     - '--path.sysfs=/host/sys'
-
-# &#x20;     - '--path.rootfs=/rootfs'
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# &#x20; apache:
-
-# &#x20;   image: httpd:latest
-
-# &#x20;   container\_name: apache
-
-# &#x20;   ports:
-
-# &#x20;     - "8080:80"
-
-# &#x20;   volumes:
-
-# &#x20;     - ./apache-logs:/usr/local/apache2/logs
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# &#x20; mysql:
-
-# &#x20;   image: mysql:8
-
-# &#x20;   container\_name: mysql
-
-# &#x20;   environment:
-
-# &#x20;     MYSQL\_ROOT\_PASSWORD: <REDACTED>
-
-# &#x20;     MYSQL\_DATABASE: testdb
-
-# &#x20;   volumes:
-
-# &#x20;     - ./mysql-logs:/var/log/mysql
-
-# &#x20;     - ./mysql.conf:/etc/mysql/conf.d/logging.conf
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# &#x20; otel-collector:
-
-# &#x20;   image: otel/opentelemetry-collector-contrib:latest
-
-# &#x20;   container\_name: otel-collector
-
-# &#x20;   volumes:
-
-# &#x20;     - ./otel-collector.yml:/etc/otel-collector.yml
-
-# &#x20;   command: --config=/etc/otel-collector.yml
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# &#x20; apache-trace-generator:
-
-# &#x20;   image: pfe/trace-generator:latest
-
-# &#x20;   container\_name: apache-trace-generator
-
-# &#x20;   command: python -u /app/apache\_generator.py
-
-# &#x20;   volumes:
-
-# &#x20;     - ./apache-logs:/var/log/apache2:ro
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# &#x20; mysql-trace-generator:
-
-# &#x20;   image: pfe/trace-generator:latest
-
-# &#x20;   container\_name: mysql-trace-generator
-
-# &#x20;   command: python -u /app/mysql\_generator.py
-
-# &#x20;   volumes:
-
-# &#x20;     - ./mysql-logs:/var/log/mysql:ro
-
-# &#x20;   restart: unless-stopped
-
-# 
-
-# volumes:
-
-# &#x20; alloy\_data:
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## 8. Vérification de la collecte
-
-# 
-
-# \### Vérification des labels Loki
-
-# 
-
-# ```bash
-
-# curl -s "http://192.168.50.10:3100/loki/api/v1/labels" | python3 -m json.tool
-
-# ```
-
-# 
-
-# Résultat attendu :
-
-# 
-
-# ```json
-
-# {
-
-# &#x20; "status": "success",
-
-# &#x20; "data": \["filename", "hostname", "job", "service\_name", "type"]
-
-# }
-
-# ```
-
-# 
-
-# \### Vérification des jobs actifs
-
-# 
-
-# ```bash
-
-# curl -s "http://192.168.50.10:3100/loki/api/v1/label/job/values" | python3 -m json.tool
-
-# ```
-
-# 
-
-# Résultat attendu :
-
-# 
-
-# ```json
-
-# {
-
-# &#x20; "status": "success",
-
-# &#x20; "data": \["apache", "mysql", "nginx", "ssh", "system"]
-
-# }
-
-# ```
-
-# 
-
-# \### Vérification des traces dans Tempo
-
-# 
-
-# ```bash
-
-# curl -s "http://192.168.50.10:3200/api/search?limit=5" | python3 -m json.tool | grep "rootServiceName"
-
-# ```
-
-# 
-
-# Résultat attendu :
-
-# 
-
-# ```
-
-# "rootServiceName": "apache"
-
-# "rootServiceName": "mysql"
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## Résultat
-
-# 
-
-# À l'issue de ce sprint, la collecte des logs et des traces est opérationnelle :
-
-# 
-
-# | Source | Logs collectés | Statut |
-
-# |--------|----------------|--------|
-
-# | S1 | Apache access/error, MySQL, SSH, System | ✅ |
-
-# | S2 | Nginx access/error, SSH, System | ✅ |
-
-# | S1 | Traces Apache (HTTP requests) | ✅ |
-
-# | S1 | Traces MySQL (SQL queries) | ✅ |
-
-# 
-
-# La stack d'observabilité complète (\*\*métriques + logs + traces\*\*) est fonctionnelle et accessible via Grafana sur MonSrv.
-
-# 
-
-# \---
-
-# 
-
-# \## Captures d'Écran
-
-# 
-
-# Les captures d'écran pour ce sprint sont à compléter ultérieurement avec :
-
-# 
-
-# \- Loki Labels disponibles
-
-# \- Loki Jobs actifs
-
-# \- Grafana Explore — Logs Apache S1
-
-# \- Grafana Explore — Logs SSH S2
-
-# \- Dashboard Logs S1 et S2
-
-# \- Tempo Traces disponibles
-
-# \- Dashboard Traces
-
-# \- Trace détaillée dans Grafana Explore
-
-# \- Alloy logs de démarrage S1
-
-# \- Volumes persistants MonSrv
-
-# 
-
-# \---
-
-# 
-
-# 
-
+Tu peux maintenant copier-coller ce contenu dans `docs/sprints/sprint-6.md`. Dis-moi "done" et on passe au Sprint 7 !
