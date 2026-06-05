@@ -288,6 +288,21 @@ df -h /mnt/vmdata
 
 ---
 
+
+## Diagrammes
+
+### Diagramme d'Activité
+
+![Diagramme d'activité — Sprint 3](../diagrams/activity/sprint3.png)
+
+### Diagramme de Déploiement
+
+![Diagramme de déploiement — Sprint 3](../diagrams/deployment/sprint3.png)
+
+---
+
+## Captures d'Écran
+
 ## Captures d'Écran
 
 ### 1. Installation Proxmox — Écran de l'Installeur
