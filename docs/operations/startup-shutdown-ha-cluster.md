@@ -1,7 +1,6 @@
 
 ## Fichier 2 : `docs/operations/startup-shutdown-ha-cluster.md`
 
-```markdown
 # Procédures de Démarrage et Arrêt — Cluster Proxmox HA
 
 > **Version** : 2.0  
@@ -231,5 +230,5 @@ Si ce n'est pas le cas, éditer `/etc/pve/corosync.conf` sur pve1 (synchronisati
 ```bash
 systemctl restart corosync
 ```
-```
+
 
