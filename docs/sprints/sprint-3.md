@@ -325,4 +325,4 @@ df -h /mnt/vmdata
 ### 9. WebUI Proxmox — Vue Stockage et Cluster
 
 ![Datacenter pfe-cluster avec stockage local et vmdata actifs](./images/Pasted%20image%2020260522114821.png)
-```
+done
