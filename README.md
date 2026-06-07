@@ -30,13 +30,13 @@ L'infrastructure repose sur six couches successives :
 
 <img width="424" height="588" alt="image" src="https://github.com/user-attachments/assets/26d08dbd-d503-40a1-9c87-fcf2a82bf8bd" />
 
-## Architecture Fonctionnelle de la Solution ACCENT
-
-<img width="769" height="470" alt="image" src="https://github.com/user-attachments/assets/658b817e-1f0d-4867-ac05-01744bebf3f6" />
-
 ##  Architecture Physique ACCENT
 
 <img width="719" height="400" alt="image" src="https://github.com/user-attachments/assets/40e9b870-1db7-4177-b319-b06de2b09000" />
+
+## Architecture Fonctionnelle de la Solution ACCENT
+
+<img width="769" height="470" alt="image" src="https://github.com/user-attachments/assets/658b817e-1f0d-4867-ac05-01744bebf3f6" />
 
 
 ---
