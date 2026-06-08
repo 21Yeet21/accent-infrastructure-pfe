@@ -281,15 +281,4 @@ wr
 | v4.0 | 2026-05-20 | Ajout pve1 Node Exporter, Wazuh VM 108, dépannage Alloy/Loki/Grafana |
 | v5.0 | 2026-05-21 | ISP-R1 config persistante, fix duplex |
 
----
 
-## What I Changed
-
-| Before | After |
-|--------|-------|
-| `<GRAFANA_PASSWORD>` | `<REDACTED>` (consistent) |
-| `<PFSENSE_PASSWORD>` | `<REDACTED>` |
-| `<PROXMOX_PASSWORD>` | `<REDACTED>` |
-| `<WAZUH_PASSWORD>` | `<REDACTED>` |
-| `<MYSQL_PASSWORD>` in dépannage | `<REDACTED>` |
-| ntopng in v5.0 changelog | Removed |
