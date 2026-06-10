@@ -134,7 +134,7 @@ Ces procédures incluent également des sections de **dépannage** pour les prob
 
 ## Auteur & Encadrement
 
-- **Réalisé par** : [21Yeet21](https://github.com/21Yeet21) & Abdelhamid (2026)
+- **Réalisé par** : [21Yeet21](https://github.com/21Yeet21) & [abdelhamid004](https://github.com/abdelhamid004) (2026)
 - **Encadré par** : M. Sofiane El Mahroug 
 
 ---
